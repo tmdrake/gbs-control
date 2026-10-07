@@ -357,9 +357,16 @@ const savePicture = () => {
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~()!*:,";
     const slot = "1";
     const index = alphabet.indexOf(slot);
+    let saved = false;
     fetch(`/slot/set?slot=${slot}&${Date.now()}`)
         .then((response) => {
         if (!response.ok) {
+            throw new Error("set");
+        }
+        return response.text();
+    })
+        .then((body) => {
+        if (body !== "true") {
             throw new Error("set");
         }
         return fetch(`/slot/save?index=${index}&name=Picture&${Date.now()}`);
@@ -368,10 +375,23 @@ const savePicture = () => {
         if (!response.ok) {
             throw new Error("meta");
         }
+        return response.text();
+    })
+        .then((body) => {
+        if (body !== "true") {
+            throw new Error("meta");
+        }
         return loadUser("4");
     })
-        .then(() => gbsAlert("Picture saved. It will load again after a restart."))
-        .catch(() => gbsAlert("Could not save the picture."));
+        .then(() => {
+        saved = true;
+        return gbsAlert("Picture saved. It will load again after a restart.");
+    })
+        .catch(() => {
+        if (!saved) {
+            gbsAlert("Could not save the picture.");
+        }
+    });
 };
 const savePreset = () => {
     const currentSlot = document.querySelector('[gbs-role="slot"][active]');
@@ -497,26 +517,33 @@ const getSlotPresetName = (presetID) => {
             return "CUSTOM";
     }
 };
-const fetchSlotNamesErrorRetry = () => {
-    setTimeout(fetchSlotNamesAndInit, 1000);
+const openControls = () => {
+    initUI();
+    if (GBSControl.structs &&
+        GBSControl.structs.slots &&
+        GBSControl.structs.slots.length === GBSControl.maxSlots) {
+        updateSlotNames();
+    }
+    createWebSocket();
+    createIntervalChecks();
+    setTimeout(hideLoading, 400);
 };
 const fetchSlotNamesAndInit = () => {
+    const boot = () => {
+        initUIElements();
+        wifiGetStatus().catch(() => { }).then(openControls);
+    };
     fetchSlotNames()
         .then((success) => {
         if (!success) {
-            fetchSlotNamesErrorRetry();
-            return;
+            GBSControl.structs = { slots: [] };
         }
-        initUIElements();
-        wifiGetStatus().then(() => {
-            initUI();
-            updateSlotNames();
-            createWebSocket();
-            createIntervalChecks();
-            setTimeout(hideLoading, 1000);
-        });
-    }, fetchSlotNamesErrorRetry)
-        .catch(fetchSlotNamesErrorRetry);
+        boot();
+    })
+        .catch(() => {
+        GBSControl.structs = { slots: [] };
+        boot();
+    });
 };
 /** Promises */
 const serial = (funcs) => funcs.reduce((promise, func) => promise.then((result) => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
@@ -762,13 +789,15 @@ const wifiGetStatus = () => {
 const wifiConnect = () => {
     const ssid = GBSControl.ui.wifiSSDInput.value;
     const password = GBSControl.ui.wifiPasswordInput.value;
-    if (!password.length) {
-        GBSControl.ui.wifiPasswordInput.classList.add("gbs-wifi__input--error");
+    if (!ssid.length) {
         return;
     }
+    GBSControl.ui.wifiPasswordInput.classList.remove("gbs-wifi__input--error");
     const formData = new FormData();
     formData.append("n", ssid);
-    formData.append("p", password);
+    if (password.length) {
+        formData.append("p", password);
+    }
     fetch("/wifi/connect", {
         method: "POST",
         body: formData,
@@ -822,8 +851,11 @@ const wifiScanSSID = () => {
     });
 };
 const wifiSelectSSID = (event) => {
-    GBSControl.ui
-        .wifiSSDInput.value = event.target.parentElement.getAttribute("gbs-ssid");
+    const row = event.target.closest("tr");
+    if (!row) {
+        return;
+    }
+    GBSControl.ui.wifiSSDInput.value = row.getAttribute("gbs-ssid");
     GBSControl.ui.wifiPasswordInput.classList.remove("gbs-wifi__input--error");
     GBSControl.ui.wifiList.setAttribute("hidden", "");
     GBSControl.ui.wifiConnect.removeAttribute("hidden");
@@ -930,6 +962,15 @@ const initControlMobileKeys = () => {
                 crtl.removeAttribute("active");
             });
             control.setAttribute("active", "");
+            const hint = document.querySelector("[gbs-control-hint]");
+            const hints = {
+                move: "Arrows shift the picture.",
+                scale: "Left and right change the width. Up and down change the height.",
+                borders: "Arrows open or close the edges.",
+            };
+            if (hint) {
+                hint.textContent = hints[control.getAttribute("gbs-control-target")] || hint.textContent;
+            }
         });
     });
     controlsKeys.forEach((control) => {

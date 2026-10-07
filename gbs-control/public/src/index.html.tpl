@@ -29,10 +29,11 @@
         </button>
         <button
           gbs-section="control"
-          class="gbs-button gbs-button__menu gbs-icon"
+          class="gbs-button gbs-button__menu"
           active
         >
-          control_camera
+          <span class="gbs-icon">control_camera</span>
+          <span class="gbs-menu__label">Picture</span>
         </button>
         <button
           gbs-section="filters"
@@ -57,9 +58,10 @@
         </button>
         <button
           gbs-section="system"
-          class="gbs-button gbs-button__menu gbs-icon"
+          class="gbs-button gbs-button__menu"
         >
-          bolt
+          <span class="gbs-icon">wifi</span>
+          <span class="gbs-menu__label">Wi-Fi</span>
         </button>
       </div>
       <div class="gbs-scroll">
@@ -216,7 +218,7 @@
                 class="gbs-button gbs-button__control"
               >
                 <div class="gbs-icon">remove_circle_outline</div>
-                <div>gain</div>
+                <div>darker</div>
               </button>
               <button
                 gbs-message="n"
@@ -225,7 +227,7 @@
                 class="gbs-button gbs-button__control"
               >
                 <div class="gbs-icon">add_circle_outline</div>
-                <div>gain</div>
+                <div>brighter</div>
               </button>
               <button
                 gbs-message="T"
@@ -292,16 +294,17 @@
                 gbs-control-target="scale"
               >
                 <div class="gbs-icon">zoom_out_map</div>
-                <div>scale</div>
+                <div>size</div>
               </button>
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="borders"
               >
                 <div class="gbs-icon">crop_free</div>
-                <div>borders</div>
+                <div>crop</div>
               </button>
             </div>
+            <p class="gbs-hint" gbs-control-hint>Arrows shift the picture. Switch to Size or Crop first if you want those.</p>
           </fieldset>
           <fieldset class="gbs-fieldset gbs-controls__desktop">
             <legend class="gbs-fieldset__legend">
@@ -382,7 +385,7 @@
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" active>
                 <div class="gbs-icon">zoom_out_map</div>
-                <div>scale</div>
+                <div>size</div>
               </button>
               <button
                 gbs-message="5"
@@ -430,7 +433,7 @@
                 active
               >
                 <div class="gbs-icon">crop_free</div>
-                <div>borders</div>
+                <div>crop</div>
               </button>
               <button
                 gbs-message="D"
@@ -505,7 +508,7 @@
             <div class="">
               <button class="gbs-button direction" active>
                 <div class="gbs-icon">zoom_out_map</div>
-                <div>scale</div>
+                <div>size</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -556,7 +559,7 @@
             <div class="">
               <button class="gbs-button direction" active>
                 <div class="gbs-icon">crop_free</div>
-                <div>borders</div>
+                <div>crop</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -612,7 +615,7 @@
               onclick="savePicture()"
             >
               <div class="gbs-icon">save</div>
-              <div>save picture</div>
+              <div>Save picture</div>
             </button>
           </div>
         </section>
@@ -1343,7 +1346,7 @@
             </div>
           </fieldset>
           <fieldset class="gbs-fieldset">
-            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help"">
+            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
               <div class="gbs-icon">sd_card</div>
               <div>Backup [intended for same device]</div>
             </legend>
@@ -1374,6 +1377,7 @@
               <div class="gbs-icon">wifi</div>
               <div>Wi-Fi</div>
             </legend>
+            <p class="gbs-hint">gbscontrol is open, with no password. A phone should open this page on its own. Station joins the scaler to a home network.</p>
 
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" gbs-wifi-ap>

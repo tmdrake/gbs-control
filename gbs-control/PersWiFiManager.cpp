@@ -85,7 +85,8 @@ void PersWiFiManager::startApMode()
     // default is DNSReplyCode::NonExistentDomain
     //_dnsServer->setErrorReplyCode(DNSReplyCode::ServerFailure);
     // modify TTL associated  with the domain name (in seconds) // default is 60 seconds
-    _dnsServer->setTTL(300); // (in seconds) as per example
+    // A long TTL sticks in the phone after it leaves this access point.
+    _dnsServer->setTTL(1);
     //_dnsServer->start((byte)53, device_hostname_full, apIP);
     _dnsServer->start(53, "*", apIP);
 

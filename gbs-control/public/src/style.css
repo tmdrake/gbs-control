@@ -164,9 +164,25 @@ body {
 }
 
 .gbs-button__menu {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
   margin: 2px;
-  width: 100%;
   text-align: center;
+  width: 100%;
+}
+
+.gbs-menu__label {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.gbs-hint {
+  color: rgba(var(--color-secondary-rgba), 0.9);
+  font-size: 14px;
+  line-height: 1.35;
+  margin: 8px 4px 0;
 }
 
 .gbs-button__preset {
@@ -637,11 +653,11 @@ section[name="alert"] {
   }
 
   .gbs-controls {
-    display: none;
+    display: block;
   }
 
   .gbs-controls__desktop {
-    display: block;
+    display: none;
   }
 
   .gbs-output {

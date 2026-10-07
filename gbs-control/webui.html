@@ -171,9 +171,25 @@ body {
 }
 
 .gbs-button__menu {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
   margin: 2px;
-  width: 100%;
   text-align: center;
+  width: 100%;
+}
+
+.gbs-menu__label {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.gbs-hint {
+  color: rgba(var(--color-secondary-rgba), 0.9);
+  font-size: 14px;
+  line-height: 1.35;
+  margin: 8px 4px 0;
 }
 
 .gbs-button__preset {
@@ -644,11 +660,11 @@ section[name="alert"] {
   }
 
   .gbs-controls {
-    display: none;
+    display: block;
   }
 
   .gbs-controls__desktop {
-    display: block;
+    display: none;
   }
 
   .gbs-output {
@@ -713,10 +729,11 @@ section[name="alert"] {
         </button>
         <button
           gbs-section="control"
-          class="gbs-button gbs-button__menu gbs-icon"
+          class="gbs-button gbs-button__menu"
           active
         >
-          control_camera
+          <span class="gbs-icon">control_camera</span>
+          <span class="gbs-menu__label">Picture</span>
         </button>
         <button
           gbs-section="filters"
@@ -741,9 +758,10 @@ section[name="alert"] {
         </button>
         <button
           gbs-section="system"
-          class="gbs-button gbs-button__menu gbs-icon"
+          class="gbs-button gbs-button__menu"
         >
-          bolt
+          <span class="gbs-icon">wifi</span>
+          <span class="gbs-menu__label">Wi-Fi</span>
         </button>
       </div>
       <div class="gbs-scroll">
@@ -900,7 +918,7 @@ section[name="alert"] {
                 class="gbs-button gbs-button__control"
               >
                 <div class="gbs-icon">remove_circle_outline</div>
-                <div>gain</div>
+                <div>darker</div>
               </button>
               <button
                 gbs-message="n"
@@ -909,7 +927,7 @@ section[name="alert"] {
                 class="gbs-button gbs-button__control"
               >
                 <div class="gbs-icon">add_circle_outline</div>
-                <div>gain</div>
+                <div>brighter</div>
               </button>
               <button
                 gbs-message="T"
@@ -976,16 +994,17 @@ section[name="alert"] {
                 gbs-control-target="scale"
               >
                 <div class="gbs-icon">zoom_out_map</div>
-                <div>scale</div>
+                <div>size</div>
               </button>
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="borders"
               >
                 <div class="gbs-icon">crop_free</div>
-                <div>borders</div>
+                <div>crop</div>
               </button>
             </div>
+            <p class="gbs-hint" gbs-control-hint>Arrows shift the picture. Switch to Size or Crop first if you want those.</p>
           </fieldset>
           <fieldset class="gbs-fieldset gbs-controls__desktop">
             <legend class="gbs-fieldset__legend">
@@ -1066,7 +1085,7 @@ section[name="alert"] {
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" active>
                 <div class="gbs-icon">zoom_out_map</div>
-                <div>scale</div>
+                <div>size</div>
               </button>
               <button
                 gbs-message="5"
@@ -1114,7 +1133,7 @@ section[name="alert"] {
                 active
               >
                 <div class="gbs-icon">crop_free</div>
-                <div>borders</div>
+                <div>crop</div>
               </button>
               <button
                 gbs-message="D"
@@ -1189,7 +1208,7 @@ section[name="alert"] {
             <div class="">
               <button class="gbs-button direction" active>
                 <div class="gbs-icon">zoom_out_map</div>
-                <div>scale</div>
+                <div>size</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -1240,7 +1259,7 @@ section[name="alert"] {
             <div class="">
               <button class="gbs-button direction" active>
                 <div class="gbs-icon">crop_free</div>
-                <div>borders</div>
+                <div>crop</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -1296,7 +1315,7 @@ section[name="alert"] {
               onclick="savePicture()"
             >
               <div class="gbs-icon">save</div>
-              <div>save picture</div>
+              <div>Save picture</div>
             </button>
           </div>
         </section>
@@ -2027,7 +2046,7 @@ section[name="alert"] {
             </div>
           </fieldset>
           <fieldset class="gbs-fieldset">
-            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help"">
+            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
               <div class="gbs-icon">sd_card</div>
               <div>Backup [intended for same device]</div>
             </legend>
@@ -2058,6 +2077,7 @@ section[name="alert"] {
               <div class="gbs-icon">wifi</div>
               <div>Wi-Fi</div>
             </legend>
+            <p class="gbs-hint">gbscontrol is open, with no password. A phone should open this page on its own. Station joins the scaler to a home network.</p>
 
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" gbs-wifi-ap>
@@ -2544,9 +2564,16 @@ const savePicture = () => {
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~()!*:,";
     const slot = "1";
     const index = alphabet.indexOf(slot);
+    let saved = false;
     fetch(`/slot/set?slot=${slot}&${Date.now()}`)
         .then((response) => {
         if (!response.ok) {
+            throw new Error("set");
+        }
+        return response.text();
+    })
+        .then((body) => {
+        if (body !== "true") {
             throw new Error("set");
         }
         return fetch(`/slot/save?index=${index}&name=Picture&${Date.now()}`);
@@ -2555,10 +2582,23 @@ const savePicture = () => {
         if (!response.ok) {
             throw new Error("meta");
         }
+        return response.text();
+    })
+        .then((body) => {
+        if (body !== "true") {
+            throw new Error("meta");
+        }
         return loadUser("4");
     })
-        .then(() => gbsAlert("Picture saved. It will load again after a restart."))
-        .catch(() => gbsAlert("Could not save the picture."));
+        .then(() => {
+        saved = true;
+        return gbsAlert("Picture saved. It will load again after a restart.");
+    })
+        .catch(() => {
+        if (!saved) {
+            gbsAlert("Could not save the picture.");
+        }
+    });
 };
 const savePreset = () => {
     const currentSlot = document.querySelector('[gbs-role="slot"][active]');
@@ -2684,26 +2724,33 @@ const getSlotPresetName = (presetID) => {
             return "CUSTOM";
     }
 };
-const fetchSlotNamesErrorRetry = () => {
-    setTimeout(fetchSlotNamesAndInit, 1000);
+const openControls = () => {
+    initUI();
+    if (GBSControl.structs &&
+        GBSControl.structs.slots &&
+        GBSControl.structs.slots.length === GBSControl.maxSlots) {
+        updateSlotNames();
+    }
+    createWebSocket();
+    createIntervalChecks();
+    setTimeout(hideLoading, 400);
 };
 const fetchSlotNamesAndInit = () => {
+    const boot = () => {
+        initUIElements();
+        wifiGetStatus().catch(() => { }).then(openControls);
+    };
     fetchSlotNames()
         .then((success) => {
         if (!success) {
-            fetchSlotNamesErrorRetry();
-            return;
+            GBSControl.structs = { slots: [] };
         }
-        initUIElements();
-        wifiGetStatus().then(() => {
-            initUI();
-            updateSlotNames();
-            createWebSocket();
-            createIntervalChecks();
-            setTimeout(hideLoading, 1000);
-        });
-    }, fetchSlotNamesErrorRetry)
-        .catch(fetchSlotNamesErrorRetry);
+        boot();
+    })
+        .catch(() => {
+        GBSControl.structs = { slots: [] };
+        boot();
+    });
 };
 /** Promises */
 const serial = (funcs) => funcs.reduce((promise, func) => promise.then((result) => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
@@ -2949,13 +2996,15 @@ const wifiGetStatus = () => {
 const wifiConnect = () => {
     const ssid = GBSControl.ui.wifiSSDInput.value;
     const password = GBSControl.ui.wifiPasswordInput.value;
-    if (!password.length) {
-        GBSControl.ui.wifiPasswordInput.classList.add("gbs-wifi__input--error");
+    if (!ssid.length) {
         return;
     }
+    GBSControl.ui.wifiPasswordInput.classList.remove("gbs-wifi__input--error");
     const formData = new FormData();
     formData.append("n", ssid);
-    formData.append("p", password);
+    if (password.length) {
+        formData.append("p", password);
+    }
     fetch("/wifi/connect", {
         method: "POST",
         body: formData,
@@ -3009,8 +3058,11 @@ const wifiScanSSID = () => {
     });
 };
 const wifiSelectSSID = (event) => {
-    GBSControl.ui
-        .wifiSSDInput.value = event.target.parentElement.getAttribute("gbs-ssid");
+    const row = event.target.closest("tr");
+    if (!row) {
+        return;
+    }
+    GBSControl.ui.wifiSSDInput.value = row.getAttribute("gbs-ssid");
     GBSControl.ui.wifiPasswordInput.classList.remove("gbs-wifi__input--error");
     GBSControl.ui.wifiList.setAttribute("hidden", "");
     GBSControl.ui.wifiConnect.removeAttribute("hidden");
@@ -3117,6 +3169,15 @@ const initControlMobileKeys = () => {
                 crtl.removeAttribute("active");
             });
             control.setAttribute("active", "");
+            const hint = document.querySelector("[gbs-control-hint]");
+            const hints = {
+                move: "Arrows shift the picture.",
+                scale: "Left and right change the width. Up and down change the height.",
+                borders: "Arrows open or close the edges.",
+            };
+            if (hint) {
+                hint.textContent = hints[control.getAttribute("gbs-control-target")] || hint.textContent;
+            }
         });
     });
     controlsKeys.forEach((control) => {
