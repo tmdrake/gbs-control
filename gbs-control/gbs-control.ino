@@ -9263,18 +9263,28 @@ void handleType2Command(char argument)
             }
             saveUserPrefs();
             break;
-        case 'n':
+        case 'n': {
+            // Brighter. A lower ADC range number makes the picture brighter.
             SerialM.print(F("ADC gain++ : "));
             uopt->enableAutoGain = 0;
-            setAdcGain(GBS::ADC_RGCTRL::read() - 1);
+            int level = (int)GBS::ADC_RGCTRL::read() - 8;
+            if (level < 0) {
+                level = 0;
+            }
+            setAdcGain((uint8_t)level);
             SerialM.println(GBS::ADC_RGCTRL::read(), HEX);
-            break;
-        case 'o':
+        } break;
+        case 'o': {
+            // Darker. A higher ADC range number dims the picture.
             SerialM.print(F("ADC gain-- : "));
             uopt->enableAutoGain = 0;
-            setAdcGain(GBS::ADC_RGCTRL::read() + 1);
+            int level = (int)GBS::ADC_RGCTRL::read() + 8;
+            if (level > 0xfe) {
+                level = 0xfe;
+            }
+            setAdcGain((uint8_t)level);
             SerialM.println(GBS::ADC_RGCTRL::read(), HEX);
-            break;
+        } break;
         case 'A': {
             uint16_t htotal = GBS::VDS_HSYNC_RST::read();
             uint16_t hbstd = GBS::VDS_DIS_HB_ST::read();
@@ -9588,38 +9598,17 @@ void handleType2Command(char argument)
 
 WiFiEventHandler disconnectedEventHandler;
 
-static bool accessPointIsUp()
-{
-    WiFiMode_t mode = WiFi.getMode();
-    return mode == WIFI_AP || mode == WIFI_AP_STA;
-}
-
-// Phones and Windows open a browser when the usual "is there internet?"
-// page is not the page they expected. DNS already points every name here.
-static void sendCaptivePortal(AsyncWebServerRequest *request)
-{
-    if (!accessPointIsUp()) {
-        request->send(404);
-        return;
-    }
-    AsyncWebServerResponse *response = request->beginResponse(
-        200,
-        "text/html",
-        "<!DOCTYPE html><html><head>"
-        "<meta http-equiv=\"refresh\" content=\"0;url=http://192.168.4.1/\">"
-        "<title>Picture controls</title></head><body>"
-        "<p><a href=\"http://192.168.4.1/\">Open picture controls</a></p>"
-        "</body></html>");
-    response->addHeader("Cache-Control", "no-store");
-    request->send(response);
-}
-
 void startWebserver()
 {
     persWM.setApCredentials(ap_ssid, ap_password);
     persWM.onConnect([]() {
+        // Core 3 clears the station hostname when Wi-Fi wakes. Set it again
+        // now that DHCP is running so the renew carries the name to the router.
+        WiFi.hostname(device_hostname_partial);
         SerialM.print(F("(WiFi): STA mode connected; IP: "));
         SerialM.println(WiFi.localIP().toString());
+        SerialM.print(F("(WiFi): DHCP hostname: "));
+        SerialM.println(WiFi.hostname());
         if (MDNS.begin(device_hostname_partial, WiFi.localIP())) { // MDNS request for gbscontrol.local
             //Serial.println("MDNS started");
             MDNS.addService("http", "tcp", 80); // Add service to MDNS-SD
@@ -9989,30 +9978,6 @@ void startWebserver()
 
         fail:
         request->send(200, "application/json", result ? "true" : "false");
-    });
-
-    const char *captivePaths[] = {
-        "/generate_204",
-        "/gen_204",
-        "/hotspot-detect.html",
-        "/library/test/success.html",
-        "/connecttest.txt",
-        "/ncsi.txt",
-        "/fwlink",
-        "/redirect",
-        "/success.txt",
-        "/canonical.html",
-        "/kindle-wifi/wifistub.html",
-    };
-    for (size_t i = 0; i < sizeof(captivePaths) / sizeof(captivePaths[0]); i++) {
-        server.on(captivePaths[i], HTTP_GET, sendCaptivePortal);
-    }
-    server.onNotFound([](AsyncWebServerRequest *request) {
-        if (accessPointIsUp()) {
-            sendCaptivePortal(request);
-        } else {
-            request->send(404);
-        }
     });
 
     //webSocket.onEvent(webSocketEvent);

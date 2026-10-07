@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Drake Sanchez</title>
+    <title>GBS-Controls</title>
     <link rel="manifest" href="${manifest}" />
     <style>
       ${styles}
@@ -1338,15 +1338,6 @@
             </legend>
             <div class="gbs-flex">
               <button
-                gbs-message="c"
-                gbs-message-type="action"
-                gbs-click="normal"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">system_update_alt</div>
-                <div>Enable OTA</div>
-              </button>
-              <button
                 gbs-message="a"
                 gbs-message-type="user"
                 gbs-click="normal"
@@ -1369,13 +1360,12 @@
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
               <div class="gbs-icon">sd_card</div>
-              <div>Backup [intended for same device]</div>
+              <div>Config file</div>
             </legend>
             <!-- prettier-ignore -->
             <ul class="gbs-help">
-              <li>Backup / Restore of configuration files</li>
-              <li>Backup is valid for current device only</li>
-              <!-- <li>Backup is valid between devices with the same hardware revision</li> -->
+              <li>Backup downloads gbs-control.cfg. Restore reads that same file.</li>
+              <li>The file holds this board's saved preferences and picture presets.</li>
             </ul>
             <div class="gbs-flex">
               <button
@@ -1388,7 +1378,7 @@
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
                 <div class="gbs-icon">cloud_upload</div>
-                <input type="file" class="gbs-backup-input" accept=".bin"/>
+                <input type="file" class="gbs-backup-input" accept=".cfg"/>
                 <div gbs-progress gbs-progress-restore>Restore</div>
               </button>
             </div>

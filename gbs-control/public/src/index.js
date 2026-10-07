@@ -691,7 +691,7 @@ const doBackup = () => {
                 return acc;
             }, []),
         ];
-        downloadBlob(new Blob([new Uint8Array(outputArray)]), `gbs-control.backup-${+new Date()}.bin`);
+        downloadBlob(new Blob([new Uint8Array(outputArray)], { type: "application/octet-stream" }), "gbs-control.cfg");
         GBSControl.ui.progressBackup.setAttribute("gbs-progress", ``);
     });
 };
@@ -1042,7 +1042,13 @@ const initGeneralListeners = () => {
     });
     GBSControl.ui.backupInput.addEventListener("change", (event) => {
         const fileList = event.target["files"];
-        readLocalFile(fileList[0]);
+        const file = fileList[0];
+        if (!file || !file.name.toLowerCase().endsWith(".cfg")) {
+            GBSControl.ui.backupInput.value = "";
+            gbsAlert("Choose a gbs-control.cfg file.");
+            return;
+        }
+        readLocalFile(file);
         GBSControl.ui.backupInput.value = "";
     });
     GBSControl.ui.backupButton.addEventListener("click", doBackup);

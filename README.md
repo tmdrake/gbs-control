@@ -4,6 +4,10 @@ Drake's ESP8266 firmware for a GBS-8200 / GBS-8220 scaler (TV5725). GPL-3.0.
 
 This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliuk/gbs-control-complete) 1.4.0. The scaler core is [ramapcsx2/gbs-control](https://github.com/ramapcsx2/gbs-control) at `e4e317a`. The web page is the control. There is no OLED and no encoder on this board. The access point `gbscontrol` is open. Picture size and position are saved with **save picture** into one slot.
 
+## This board
+
+GBS-8200 v4 with an Si5351 clock chip and a Primal Rage arcade board on the RGB input. The page title is GBS-Controls. The board sends the DHCP hostname `gbscontrol`, so the router can answer `http://gbscontrol.local`. Darker and brighter move the input gain by 8. Backup and restore use `gbs-control.cfg`. The over-the-air update button is not on the page.
+
 ## Ignore VSync
 
 Picture page setting, saved on the board. Some game boards XOR horizontal and vertical sync together and feed that to the CSync pin. During the vertical interval the horizontal pulses flip polarity, and there is no long vertical pulse. That confuses the TV5725 CSync input and the picture rolls the way an old television did when vertical hold let go. With **Ignore VSync** on, the scaler locks from horizontal sync instead of waiting for that pulse. Turn it off for a source that has separate H and V.

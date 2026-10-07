@@ -28,7 +28,8 @@ bool PersWiFiManager::attemptConnection(const String &ssid, const String &pass)
     //attempt to connect to wifi
     WiFi.persistent(true);
     WiFi.mode(WIFI_STA);
-    WiFi.hostname(device_hostname_partial); // _full // before WiFi.begin();
+    // After mode(), the SDK may have cleared the DHCP hostname.
+    WiFi.hostname(device_hostname_partial); // before WiFi.begin()
     if (ssid.length()) {
         if (pass.length())
             WiFi.begin(ssid.c_str(), pass.c_str());
@@ -85,8 +86,7 @@ void PersWiFiManager::startApMode()
     // default is DNSReplyCode::NonExistentDomain
     //_dnsServer->setErrorReplyCode(DNSReplyCode::ServerFailure);
     // modify TTL associated  with the domain name (in seconds) // default is 60 seconds
-    // A long TTL sticks in the phone after it leaves this access point.
-    _dnsServer->setTTL(1);
+    _dnsServer->setTTL(300); // (in seconds) as per example
     //_dnsServer->start((byte)53, device_hostname_full, apIP);
     _dnsServer->start(53, "*", apIP);
 
