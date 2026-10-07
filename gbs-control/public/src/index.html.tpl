@@ -60,8 +60,8 @@
           gbs-section="system"
           class="gbs-button gbs-button__menu"
         >
-          <span class="gbs-icon">wifi</span>
-          <span class="gbs-menu__label">Wi-Fi</span>
+          <span class="gbs-icon">settings</span>
+          <span class="gbs-menu__label">System</span>
         </button>
       </div>
       <div class="gbs-scroll">
@@ -203,12 +203,12 @@
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
               <div class="gbs-icon">wb_sunny</div>
-              <div>ADC Gain (brightness)</div>
+              <div>Gain and contrast</div>
             </legend>
             <!-- prettier-ignore -->
             <ul class="gbs-help">
-              <li>Gain +/- adjusts the gain for the currently loaded preset.</li>
-              <li>Auto Gain increases gain so bright areas are displayed as white, then decreases it when clipping is detected. Calibrate for a few seconds on a white screen.</li>
+              <li>Darker / brighter change the analog input gain. Auto Gain chases white, then turns off when you set gain by hand.</li>
+              <li>Contrast stretches black to white on the scaled picture. Save picture stores it with the preset.</li>
             </ul>
             <div class="gbs-flex gbs-margin__bottom--16">
               <button
@@ -238,6 +238,26 @@
               >
                 <div class="gbs-icon">brightness_auto</div>
                 <div>Auto Gain</div>
+              </button>
+            </div>
+            <div class="gbs-flex gbs-margin__bottom--16">
+              <button
+                gbs-message="M"
+                gbs-message-type="user"
+                gbs-click="repeat"
+                class="gbs-button gbs-button__control"
+              >
+                <div class="gbs-icon">remove_circle_outline</div>
+                <div>contrast −</div>
+              </button>
+              <button
+                gbs-message="N"
+                gbs-message-type="user"
+                gbs-click="repeat"
+                class="gbs-button gbs-button__control"
+              >
+                <div class="gbs-icon">add_circle_outline</div>
+                <div>contrast +</div>
               </button>
             </div>
           </fieldset>
@@ -1372,6 +1392,24 @@
         </section>
 
         <section name="system" hidden>
+          <fieldset class="gbs-fieldset">
+            <legend class="gbs-fieldset__legend">
+              <div class="gbs-icon">insights</div>
+              <div>Incoming signal</div>
+            </legend>
+            <dl class="gbs-signal">
+              <dt>Input</dt>
+              <dd id="signal-lock">—</dd>
+              <dt>Detected</dt>
+              <dd id="signal-mode">—</dd>
+              <dt>Lines</dt>
+              <dd id="signal-lines">—</dd>
+              <dt>Sync</dt>
+              <dd id="signal-sync">—</dd>
+              <dt>Frame lock</dt>
+              <dd id="signal-ftl">—</dd>
+            </dl>
+          </fieldset>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend">
               <div class="gbs-icon">bolt</div>

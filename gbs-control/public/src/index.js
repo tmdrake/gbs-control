@@ -339,9 +339,55 @@ const checkReadyState = () => {
         return true;
     }
 };
+const setSignalText = (id, text, isOff) => {
+    const el = document.getElementById(id);
+    if (!el) {
+        return;
+    }
+    el.textContent = text;
+    if (isOff) {
+        el.classList.add("is-off");
+    }
+    else {
+        el.classList.remove("is-off");
+    }
+};
+const updateSignal = () => {
+    fetch(`/signal?${Date.now()}`)
+        .then((response) => {
+        if (!response.ok) {
+            throw new Error("signal");
+        }
+        return response.json();
+    })
+        .then((data) => {
+        setSignalText("signal-lock", data.lock ? "locked" : "no signal", !data.lock);
+        setSignalText("signal-mode", data.mode || "—", !data.lock);
+        setSignalText("signal-lines", data.lock ? String(data.lines) : "—", !data.lock);
+        let sync = "none";
+        if (data.hsync && data.vsync) {
+            sync = "H and V";
+        }
+        else if (data.hsync) {
+            sync = "H only";
+        }
+        else if (data.vsync) {
+            sync = "V only";
+        }
+        setSignalText("signal-sync", sync, !data.hsync);
+        let ftl = "off";
+        if (data.frameLock) {
+            ftl = data.frameLockReady ? "on, locked" : "on, locking";
+        }
+        setSignalText("signal-ftl", ftl, data.frameLock && !data.frameLockReady);
+    })
+        .catch(() => { });
+};
 const createIntervalChecks = () => {
     GBSControl.wsCheckTimer = setInterval(checkWebSocketServer, 500);
     GBSControl.updateTerminalTimer = setInterval(updateTerminal, 50);
+    GBSControl.signalTimer = setInterval(updateSignal, 1000);
+    updateSignal();
 };
 /* API services */
 const loadDoc = (link) => {

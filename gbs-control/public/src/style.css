@@ -185,6 +185,28 @@ body {
   margin: 8px 4px 0;
 }
 
+.gbs-signal {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 6px 12px;
+  margin: 8px 4px 4px;
+  font-size: 15px;
+}
+
+.gbs-signal dt {
+  color: rgba(var(--color-secondary-rgba), 0.9);
+  margin: 0;
+}
+
+.gbs-signal dd {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.gbs-signal dd.is-off {
+  color: var(--color-warning);
+}
+
 .gbs-button__preset {
   flex-grow: 1;
   font-size: 12px;

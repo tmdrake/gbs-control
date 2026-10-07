@@ -200,6 +200,12 @@ struct runTimeOptions rtos;
 struct runTimeOptions *rto = &rtos;
 struct userOptions uopts;
 struct userOptions *uopt = &uopts;
+
+static void flashOsdIcon(OSDIcon icon)
+{
+    osdManager.preset = uopt->presetPreference;
+    osdManager.showIcon(icon);
+}
 struct adcOptions adcopts;
 struct adcOptions *adco = &adcopts;
 
@@ -7847,6 +7853,15 @@ void loop()
 #endif
 #endif
 
+    osdManager.hideIfExpired();
+    {
+        static bool bootOsdShown = false;
+        if (!bootOsdShown && GBS::VDS_HSYNC_RST::read() != 0 && GBS::STATUS_SYNC_PROC_HSACT::read()) {
+            flashOsdIcon(OSDIcon::BRIGHTNESS);
+            bootOsdShown = true;
+        }
+    }
+
     handleWiFi(0); // WiFi + OTA + WS + MDNS, checks for server enabled + started
 
     // is there a command from Terminal or web ui?
@@ -7904,17 +7919,21 @@ void loop()
                 break;
             case '*':
                 shiftVerticalUpIF();
+                flashOsdIcon(OSDIcon::MOVE_Y);
                 break;
             case '/':
                 shiftVerticalDownIF();
+                flashOsdIcon(OSDIcon::MOVE_Y);
                 break;
             case 'z':
                 SerialM.println(F("scale+"));
                 scaleHorizontal(2, true);
+                flashOsdIcon(OSDIcon::SCALE_X);
                 break;
             case 'h':
                 SerialM.println(F("scale-"));
                 scaleHorizontal(2, false);
+                flashOsdIcon(OSDIcon::SCALE_X);
                 break;
             case 'q':
                 resetDigital();
@@ -8299,6 +8318,7 @@ void loop()
                 break;
             case '4': {
                 // scale vertical +
+                flashOsdIcon(OSDIcon::SCALE_Y);
                 if (GBS::VDS_VSCALE::read() <= 256) {
                     SerialM.println("limit");
                     break;
@@ -8308,6 +8328,7 @@ void loop()
             } break;
             case '5': {
                 // scale vertical -
+                flashOsdIcon(OSDIcon::SCALE_Y);
                 if (GBS::VDS_VSCALE::read() == 1023) {
                     SerialM.println("limit");
                     break;
@@ -8316,6 +8337,7 @@ void loop()
                 // actually requires full vertical mask + position offset calculation
             } break;
             case '6':
+                flashOsdIcon(OSDIcon::MOVE_X);
                 if (videoStandardInputIsPalNtscSd() && !rto->outModeHdBypass) {
                     if (GBS::IF_HBIN_SP::read() >= 10) {                     // IF_HBIN_SP: min 2
                         GBS::IF_HBIN_SP::write(GBS::IF_HBIN_SP::read() - 8); // canvas move right
@@ -8342,6 +8364,7 @@ void loop()
                 }
                 break;
             case '7':
+                flashOsdIcon(OSDIcon::MOVE_X);
                 if (videoStandardInputIsPalNtscSd() && !rto->outModeHdBypass) {
                     if (GBS::IF_HBIN_SP::read() < 0x150) {                   // (arbitrary) max limit
                         GBS::IF_HBIN_SP::write(GBS::IF_HBIN_SP::read() + 8); // canvas move left
@@ -9053,6 +9076,7 @@ void handleType2Command(char argument)
             //
             break;
         case '7':
+            flashOsdIcon(OSDIcon::HUE);
             uopt->wantScanlines = !uopt->wantScanlines;
             SerialM.print(F("scanlines: "));
             if (uopt->wantScanlines) {
@@ -9267,6 +9291,7 @@ void handleType2Command(char argument)
             // Brighter. A lower ADC range number makes the picture brighter.
             SerialM.print(F("ADC gain++ : "));
             uopt->enableAutoGain = 0;
+            flashOsdIcon(OSDIcon::BRIGHTNESS);
             int level = (int)GBS::ADC_RGCTRL::read() - 8;
             if (level < 0) {
                 level = 0;
@@ -9278,6 +9303,7 @@ void handleType2Command(char argument)
             // Darker. A higher ADC range number dims the picture.
             SerialM.print(F("ADC gain-- : "));
             uopt->enableAutoGain = 0;
+            flashOsdIcon(OSDIcon::BRIGHTNESS);
             int level = (int)GBS::ADC_RGCTRL::read() + 8;
             if (level > 0xfe) {
                 level = 0xfe;
@@ -9470,18 +9496,26 @@ void handleType2Command(char argument)
             SerialM.print(F("Brightness-- : "));
             SerialM.println(GBS::VDS_Y_OFST::read(), DEC);
         break;
-        case 'N':
-            // contrast++
-            GBS::VDS_Y_GAIN::write(GBS::VDS_Y_GAIN::read() + 1);
+        case 'N': {
+            flashOsdIcon(OSDIcon::CONTRAST);
+            int gain = (int)GBS::VDS_Y_GAIN::read() + 8;
+            if (gain > 255) {
+                gain = 255;
+            }
+            GBS::VDS_Y_GAIN::write((uint8_t)gain);
             SerialM.print(F("Contrast++ : "));
             SerialM.println(GBS::VDS_Y_GAIN::read(), DEC);
-        break;
-        case 'M':
-            // contrast--
-            GBS::VDS_Y_GAIN::write(GBS::VDS_Y_GAIN::read() - 1);
+        } break;
+        case 'M': {
+            flashOsdIcon(OSDIcon::CONTRAST);
+            int gain = (int)GBS::VDS_Y_GAIN::read() - 8;
+            if (gain < 0) {
+                gain = 0;
+            }
+            GBS::VDS_Y_GAIN::write((uint8_t)gain);
             SerialM.print(F("Contrast-- : "));
             SerialM.println(GBS::VDS_Y_GAIN::read(), DEC);
-        break;
+        } break;
         case 'Q':
              // pb/u gain++
             GBS::VDS_UCOS_GAIN::write(GBS::VDS_UCOS_GAIN::read() + 1);
@@ -9978,6 +10012,58 @@ void startWebserver()
 
         fail:
         request->send(200, "application/json", result ? "true" : "false");
+    });
+
+    server.on("/signal", HTTP_GET, [](AsyncWebServerRequest *request) {
+        uint8_t mode = getVideoMode();
+        uint16_t lines = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+        bool hsync = GBS::STATUS_SYNC_PROC_HSACT::read() != 0;
+        bool vsync = GBS::STATUS_SYNC_PROC_VSACT::read() != 0;
+        bool lock = (mode != 0) && hsync;
+        const char *modeName = "none";
+        switch (mode) {
+            case 1:
+                modeName = "NTSC 240p/480i";
+                break;
+            case 2:
+                modeName = "PAL 576i";
+                break;
+            case 3:
+                modeName = "480p";
+                break;
+            case 4:
+                modeName = "576p";
+                break;
+            case 5:
+                modeName = "720p";
+                break;
+            case 6:
+                modeName = "1080i";
+                break;
+            case 8:
+                modeName = "VGA/SVGA";
+                break;
+            case 14:
+            case 15:
+                modeName = "HSync RGBS/RGBHV";
+                break;
+            default:
+                if (mode != 0) {
+                    modeName = "other";
+                }
+                break;
+        }
+        char buf[240];
+        snprintf(buf, sizeof(buf),
+                 "{\"lock\":%s,\"mode\":\"%s\",\"lines\":%u,\"hsync\":%s,\"vsync\":%s,\"frameLock\":%s,\"frameLockReady\":%s}",
+                 lock ? "true" : "false",
+                 modeName,
+                 (unsigned)lines,
+                 hsync ? "true" : "false",
+                 vsync ? "true" : "false",
+                 uopt->enableFrameTimeLock ? "true" : "false",
+                 FrameSync::ready() ? "true" : "false");
+        request->send(200, "application/json", buf);
     });
 
     //webSocket.onEvent(webSocketEvent);

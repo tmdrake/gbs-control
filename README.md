@@ -31,17 +31,20 @@ On the home network the board sends the DHCP name `gbscontrol`. Open `http://gbs
 ![Picture page](images/picture-page.png)
 
 - **Darker** and **brighter** move the input gain by 8. **Auto Gain** chases white on its own and turns off when you set the gain by hand.
+- **Contrast −** and **contrast +** stretch black to white on the scaled picture (`VDS_Y_GAIN`, step of 8).
 - **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
 - **Scanlines** turns the line overlay on or off.
 - **Ignore VSync** is for boards that XOR horizontal and vertical sync onto the CSync pin. Those pulses flip during the vertical interval and there is no long vertical pulse, so the scaler locks from horizontal sync instead. Turn it off for a source with separate H and V.
-- **Save picture** stores the size and position in one slot. That slot loads again at startup.
+- **Save picture** stores the size, position, and contrast in one slot. That slot loads again at startup.
 
-## Wi-Fi
+The TV5725 factory OSD icons appear on the video for a couple of seconds at lock, and again when you tap gain, contrast, move, size, or scanlines. Those icons are hardwired in the chip. Custom text or a custom logo cannot be uploaded.
 
-![Wi-Fi page](images/wifi-page.png)
+## System
 
-**Restart** and **Reset Defaults** are on this page. **Backup** downloads `gbs-control.cfg`. **Restore** reads that file back and restarts the scaler. **Station** joins a home network. The over-the-air update button is not on the page.
+![System page](images/wifi-page.png)
+
+**Incoming signal** sits at the top of this tab and refreshes every second: lock, detected mode, line count, H/V sync, and Frame Time Lock. **Restart** and **Reset Defaults** are below that. **Backup** downloads `gbs-control.cfg`. **Restore** reads that file back and restarts the scaler. **Station** joins a home network. The over-the-air update button is not on the page.
 
 The notes below are the 1.4.0 package this project started from.
 

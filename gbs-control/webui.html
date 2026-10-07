@@ -192,6 +192,28 @@ body {
   margin: 8px 4px 0;
 }
 
+.gbs-signal {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 6px 12px;
+  margin: 8px 4px 4px;
+  font-size: 15px;
+}
+
+.gbs-signal dt {
+  color: rgba(var(--color-secondary-rgba), 0.9);
+  margin: 0;
+}
+
+.gbs-signal dd {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.gbs-signal dd.is-off {
+  color: var(--color-warning);
+}
+
 .gbs-button__preset {
   flex-grow: 1;
   font-size: 12px;
@@ -760,8 +782,8 @@ section[name="alert"] {
           gbs-section="system"
           class="gbs-button gbs-button__menu"
         >
-          <span class="gbs-icon">wifi</span>
-          <span class="gbs-menu__label">Wi-Fi</span>
+          <span class="gbs-icon">settings</span>
+          <span class="gbs-menu__label">System</span>
         </button>
       </div>
       <div class="gbs-scroll">
@@ -903,12 +925,12 @@ section[name="alert"] {
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
               <div class="gbs-icon">wb_sunny</div>
-              <div>ADC Gain (brightness)</div>
+              <div>Gain and contrast</div>
             </legend>
             <!-- prettier-ignore -->
             <ul class="gbs-help">
-              <li>Gain +/- adjusts the gain for the currently loaded preset.</li>
-              <li>Auto Gain increases gain so bright areas are displayed as white, then decreases it when clipping is detected. Calibrate for a few seconds on a white screen.</li>
+              <li>Darker / brighter change the analog input gain. Auto Gain chases white, then turns off when you set gain by hand.</li>
+              <li>Contrast stretches black to white on the scaled picture. Save picture stores it with the preset.</li>
             </ul>
             <div class="gbs-flex gbs-margin__bottom--16">
               <button
@@ -938,6 +960,26 @@ section[name="alert"] {
               >
                 <div class="gbs-icon">brightness_auto</div>
                 <div>Auto Gain</div>
+              </button>
+            </div>
+            <div class="gbs-flex gbs-margin__bottom--16">
+              <button
+                gbs-message="M"
+                gbs-message-type="user"
+                gbs-click="repeat"
+                class="gbs-button gbs-button__control"
+              >
+                <div class="gbs-icon">remove_circle_outline</div>
+                <div>contrast −</div>
+              </button>
+              <button
+                gbs-message="N"
+                gbs-message-type="user"
+                gbs-click="repeat"
+                class="gbs-button gbs-button__control"
+              >
+                <div class="gbs-icon">add_circle_outline</div>
+                <div>contrast +</div>
               </button>
             </div>
           </fieldset>
@@ -2074,6 +2116,24 @@ section[name="alert"] {
         <section name="system" hidden>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend">
+              <div class="gbs-icon">insights</div>
+              <div>Incoming signal</div>
+            </legend>
+            <dl class="gbs-signal">
+              <dt>Input</dt>
+              <dd id="signal-lock">—</dd>
+              <dt>Detected</dt>
+              <dd id="signal-mode">—</dd>
+              <dt>Lines</dt>
+              <dd id="signal-lines">—</dd>
+              <dt>Sync</dt>
+              <dd id="signal-sync">—</dd>
+              <dt>Frame lock</dt>
+              <dd id="signal-ftl">—</dd>
+            </dl>
+          </fieldset>
+          <fieldset class="gbs-fieldset">
+            <legend class="gbs-fieldset__legend">
               <div class="gbs-icon">bolt</div>
               <div>System</div>
             </legend>
@@ -2598,9 +2658,55 @@ const checkReadyState = () => {
         return true;
     }
 };
+const setSignalText = (id, text, isOff) => {
+    const el = document.getElementById(id);
+    if (!el) {
+        return;
+    }
+    el.textContent = text;
+    if (isOff) {
+        el.classList.add("is-off");
+    }
+    else {
+        el.classList.remove("is-off");
+    }
+};
+const updateSignal = () => {
+    fetch(`/signal?${Date.now()}`)
+        .then((response) => {
+        if (!response.ok) {
+            throw new Error("signal");
+        }
+        return response.json();
+    })
+        .then((data) => {
+        setSignalText("signal-lock", data.lock ? "locked" : "no signal", !data.lock);
+        setSignalText("signal-mode", data.mode || "—", !data.lock);
+        setSignalText("signal-lines", data.lock ? String(data.lines) : "—", !data.lock);
+        let sync = "none";
+        if (data.hsync && data.vsync) {
+            sync = "H and V";
+        }
+        else if (data.hsync) {
+            sync = "H only";
+        }
+        else if (data.vsync) {
+            sync = "V only";
+        }
+        setSignalText("signal-sync", sync, !data.hsync);
+        let ftl = "off";
+        if (data.frameLock) {
+            ftl = data.frameLockReady ? "on, locked" : "on, locking";
+        }
+        setSignalText("signal-ftl", ftl, data.frameLock && !data.frameLockReady);
+    })
+        .catch(() => { });
+};
 const createIntervalChecks = () => {
     GBSControl.wsCheckTimer = setInterval(checkWebSocketServer, 500);
     GBSControl.updateTerminalTimer = setInterval(updateTerminal, 50);
+    GBSControl.signalTimer = setInterval(updateSignal, 1000);
+    updateSignal();
 };
 /* API services */
 const loadDoc = (link) => {

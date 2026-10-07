@@ -78,6 +78,7 @@ private:
     uint8_t cursor;
     uint8_t curVal;
     uint8_t curMax;
+    unsigned long hideAt;
     OSDHanlder handlers[8];
     OSDState state;
     bool displayInColumn;
@@ -111,6 +112,7 @@ public:
     OSDManager()
     {
         memset(&this->handlers, 0, sizeof(this->handlers));
+        hideAt = 0;
     }
     uint8 preset;
     void registerIcon(OSDIcon icon, OSDHanlder handler)
@@ -211,6 +213,24 @@ public:
         GBS::OSD_MENU_EN::write(true);
         GBS::OSD_COMMAND_FINISH::write(true);
         state = OSDState::MAIN;
+    }
+
+    void showIcon(OSDIcon icon)
+    {
+        if (GBS::VDS_HSYNC_RST::read() == 0) {
+            return;
+        }
+        cursor = (uint8_t)icon;
+        menuOn();
+        hideAt = millis() + 2500;
+    }
+
+    void hideIfExpired()
+    {
+        if (state != OSDState::OFF && hideAt != 0 && (long)(millis() - hideAt) >= 0) {
+            menuOff();
+            hideAt = 0;
+        }
     }
 
     void menuOff()
