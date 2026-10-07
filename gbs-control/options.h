@@ -36,6 +36,9 @@ struct userOptions
     uint8_t wantFullHeight;
     uint8_t enableCalibrationADC;
     uint8_t scanlineStrength;
+    // Keep the loaded picture when composite sync has no long vertical pulse.
+    // A real horizontal-sync loss still drops to no-signal.
+    uint8_t coastThroughMissingVSync;
 };
 
 

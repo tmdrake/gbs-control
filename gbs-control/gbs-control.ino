@@ -1478,6 +1478,14 @@ uint8_t detectAndSwitchToActiveInput()
                     delay(1);
                 }
 
+                // Saved option. Some boards XOR H and V onto the CSync pin, so the
+                // horizontal pulses flip during vertical blank and there is no
+                // long vertical pulse. Accept HSync alone instead of waiting.
+                if (uopt->coastThroughMissingVSync && !vsyncActive && GBS::STATUS_SYNC_PROC_HSACT::read()) {
+                    SerialM.println(F("VSync ignored (HSync only)"));
+                    vsyncActive = 1;
+                }
+
                 // if VSync is active, it's RGBHV or RGBHV with CSync on HS pin
                 if (vsyncActive) {
                     SerialM.println(F("VSync: present"));
@@ -5991,7 +5999,23 @@ void runSyncWatcher()
         }
     }
 
-    if ((detectedVideoMode == 0 || !status16SpHsStable) && rto->videoStandardInput != 15) {
+    // Composite sync often has no long vertical pulse, so mode detect drops
+    // while the horizontal period is still good. Coast keeps the preset.
+    bool coastMissingVSync = uopt->coastThroughMissingVSync && detectedVideoMode == 0 && status16SpHsStable && GBS::STATUS_SYNC_PROC_HSACT::read() == 1 && rto->videoStandardInput != 15;
+    if (coastMissingVSync) {
+        // Horizontal sync is still there, but the long vertical pulse is not.
+        // Hold the last frame and the output timing. Do not hunt, and do not
+        // let frame lock chase a missing vertical or the picture rolls.
+        if (rto->noSyncCounter == 0) {
+            SerialM.print(F("\ncoast\n"));
+            freezeVideo();
+            GBS::SP_NO_COAST_REG::write(0);
+            GBS::SP_H_PROTECT::write(1);
+        }
+        rto->noSyncCounter = 2;
+        rto->continousStableCounter = 0;
+        lastVsyncLock = millis();
+    } else if ((detectedVideoMode == 0 || !status16SpHsStable) && rto->videoStandardInput != 15) {
         rto->noSyncCounter++;
         rto->continousStableCounter = 0;
         lastVsyncLock = millis(); // best reset this
@@ -7116,6 +7140,7 @@ void loadDefaultUserOptions()
     uopt->enableCalibrationADC = 1;          // #17
     uopt->scanlineStrength = 0x30;           // #18
     uopt->disableExternalClockGenerator = 0; // #19
+    uopt->coastThroughMissingVSync = 1;      // #20
 }
 
 //RF_PRE_INIT() {
@@ -7421,6 +7446,16 @@ void setup()
             uopt->disableExternalClockGenerator = (uint8_t)(f.read() - '0'); // #19
             if (uopt->disableExternalClockGenerator > 1)
                 uopt->disableExternalClockGenerator = 0;
+
+            // Older files end here. Missing byte means coast stays on.
+            int coastByte = f.read();
+            if (coastByte < 0) {
+                uopt->coastThroughMissingVSync = 1;
+            } else {
+                uopt->coastThroughMissingVSync = (uint8_t)(coastByte - '0');
+                if (uopt->coastThroughMissingVSync > 1)
+                    uopt->coastThroughMissingVSync = 1;
+            }
 
             f.close();
         }
@@ -7730,6 +7765,9 @@ void updateWebSocketData()
             }
             if (uopt->disableExternalClockGenerator) {
                 toSend[5] |= (1 << 2);
+            }
+            if (uopt->coastThroughMissingVSync) {
+                toSend[5] |= (1 << 3);
             }
 
             // send ping and stats
@@ -9028,6 +9066,12 @@ void handleType2Command(char argument)
         case '9':
             //
             break;
+        case 'c':
+            uopt->coastThroughMissingVSync = uopt->coastThroughMissingVSync ? 0 : 1;
+            saveUserPrefs();
+            SerialM.print(F("coast through missing VSync: "));
+            SerialM.println(uopt->coastThroughMissingVSync ? F("on") : F("off"));
+            break;
         case 'a':
             webSocket.close();
             Serial.println(F("restart"));
@@ -10283,6 +10327,7 @@ void saveUserPrefs()
     f.write(uopt->enableCalibrationADC + '0');          // #17
     f.write(uopt->scanlineStrength + '0');              // #18
     f.write(uopt->disableExternalClockGenerator + '0'); // #19
+    f.write(uopt->coastThroughMissingVSync + '0');      // #20
 
 
     f.close();

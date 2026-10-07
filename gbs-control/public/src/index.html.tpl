@@ -610,6 +610,26 @@
           </fieldset> -->
           <div class="gbs-flex gbs-margin__bottom--16">
             <button
+              gbs-message="7"
+              gbs-message-type="user"
+              gbs-click="normal"
+              gbs-toggle="scanlines"
+              class="gbs-button gbs-button__control gbs-button__secondary"
+            >
+              <div class="gbs-icon">gradient</div>
+              <div>Scanlines</div>
+            </button>
+            <button
+              gbs-message="c"
+              gbs-message-type="user"
+              gbs-click="normal"
+              gbs-toggle="coastThroughMissingVSync"
+              class="gbs-button gbs-button__control gbs-button__secondary"
+            >
+              <div class="gbs-icon">sync</div>
+              <div>Ignore VSync</div>
+            </button>
+            <button
               class="gbs-button gbs-button__control-action"
               type="button"
               onclick="savePicture()"
@@ -618,6 +638,7 @@
               <div>Save picture</div>
             </button>
           </div>
+          <p class="gbs-hint">Some boards XOR horizontal and vertical sync onto the CSync pin. The pulses flip during the vertical interval and there is no long vertical pulse, which confuses the CSync input. Ignore VSync locks from horizontal sync instead. Turn it off for a source with separate H and V.</p>
         </section>
 
         <section name="filters" hidden>
