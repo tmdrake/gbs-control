@@ -1,18 +1,37 @@
 # gbs-control
 
-Drake's ESP8266 firmware for a GBS-8200 / GBS-8220 scaler (TV5725). GPL-3.0.
+A simple web page for a GBS-8200 used as a CSYNC RGB upscaler. GPL-3.0.
 
-This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliuk/gbs-control-complete) 1.4.0. The scaler core is [ramapcsx2/gbs-control](https://github.com/ramapcsx2/gbs-control) at `e4e317a`. The web page is the control. There is no OLED and no encoder on this board. The access point `gbscontrol` is open. Picture size and position are saved with **save picture** into one slot.
+The hardware was built to take composite-sync RGB, the signal an arcade board puts on one sync pin, and scale it for a modern display. This spinoff keeps that job on one page. There is no OLED and no encoder. The web page is the control.
 
-## This board
+The board in use is a GBS-8200 v4 with an Si5351 clock chip. The first source is a Primal Rage arcade board. The page title is GBS-Controls.
 
-GBS-8200 v4 with an Si5351 clock chip and a Primal Rage arcade board on the RGB input. The page title is GBS-Controls. The board sends the DHCP hostname `gbscontrol`, so the router can answer `http://gbscontrol.local`. Darker and brighter move the input gain by 8. Backup and restore use `gbs-control.cfg`. Frame Time Lock is on the Picture page. The over-the-air update button is not on the page.
+This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliuk/gbs-control-complete) 1.4.0. The scaler core is [ramapcsx2/gbs-control](https://github.com/ramapcsx2/gbs-control) at `e4e317a`. GitHub does not list this repository as a fork of either project. The code was committed from a snapshot, then changed for this board.
 
-## Ignore VSync
+## Open the page
 
-Picture page setting, saved on the board. Some game boards XOR horizontal and vertical sync together and feed that to the CSync pin. During the vertical interval the horizontal pulses flip polarity, and there is no long vertical pulse. That confuses the TV5725 CSync input and the picture rolls the way an old television did when vertical hold let go. With **Ignore VSync** on, the scaler locks from horizontal sync instead of waiting for that pulse. Turn it off for a source that has separate H and V.
+The open access point is `gbscontrol`, with no password. From the phone, open `http://192.168.4.1`.
 
-The notes below are the 1.4.0 package this fork started from.
+On the home network the board sends the DHCP name `gbscontrol`. Open `http://gbscontrol.local` or `http://192.168.254.158` when the router has given it that address.
+
+## Picture
+
+![Picture page](images/picture-page.png)
+
+- **Darker** and **brighter** move the input gain by 8. **Auto Gain** chases white on its own and turns off when you set the gain by hand.
+- **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
+- **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
+- **Scanlines** turns the line overlay on or off.
+- **Ignore VSync** is for boards that XOR horizontal and vertical sync onto the CSync pin. Those pulses flip during the vertical interval and there is no long vertical pulse, so the scaler locks from horizontal sync instead. Turn it off for a source with separate H and V.
+- **Save picture** stores the size and position in one slot. That slot loads again at startup.
+
+## Wi-Fi
+
+![Wi-Fi page](images/wifi-page.png)
+
+**Restart** and **Reset Defaults** are on this page. **Backup** downloads `gbs-control.cfg`. **Restore** reads that file back and restarts the scaler. **Station** joins a home network. The over-the-air update button is not on the page.
+
+The notes below are the 1.4.0 package this project started from.
 
 # GBS-Control-Complete 1.4.0
 
