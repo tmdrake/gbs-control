@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560">
+  <rect width="980" height="560" fill="#f7f6f2"/>
+  <text x="36" y="38" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#1a1a1a">GBS-8200 v4 video input</text>
+  <text x="36" y="64" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">Red, green, and blue are series resistors. CSYNC is the only termination, to ground.</text>
+
+  <g stroke="#1a1a1a" stroke-width="2" fill="none">
+    <line x1="90" y1="120" x2="230" y2="120"/>
+    <line x1="310" y1="120" x2="800" y2="120"/>
+    <line x1="90" y1="190" x2="230" y2="190"/>
+    <line x1="310" y1="190" x2="800" y2="190"/>
+    <line x1="90" y1="260" x2="230" y2="260"/>
+    <line x1="310" y1="260" x2="800" y2="260"/>
+  </g>
+  <g fill="#fff" stroke="#1a1a1a" stroke-width="2">
+    <rect x="230" y="100" width="80" height="40"/>
+    <rect x="230" y="170" width="80" height="40"/>
+    <rect x="230" y="240" width="80" height="40"/>
+  </g>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#1a1a1a">
+    <text x="56" y="125">R</text>
+    <text x="56" y="195">G</text>
+    <text x="56" y="265">B</text>
+    <text x="248" y="125">series</text>
+    <text x="248" y="195">series</text>
+    <text x="248" y="265">series</text>
+    <text x="816" y="125">GBS red</text>
+    <text x="816" y="195">GBS green</text>
+    <text x="816" y="265">GBS blue</text>
+    <text x="90" y="98" font-size="13" fill="#444">about 5 V</text>
+    <text x="640" y="98" font-size="13" fill="#444">about 1 V at the scaler</text>
+  </g>
+
+  <g stroke="#1a1a1a" stroke-width="2" fill="none">
+    <line x1="90" y1="360" x2="430" y2="360"/>
+    <line x1="430" y1="360" x2="800" y2="360"/>
+    <line x1="430" y1="360" x2="430" y2="410"/>
+    <line x1="430" y1="450" x2="430" y2="470"/>
+    <line x1="390" y1="470" x2="470" y2="470"/>
+  </g>
+  <rect x="408" y="410" width="44" height="40" fill="#fff" stroke="#1a1a1a" stroke-width="2"/>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#1a1a1a">
+    <text x="36" y="365">CSYNC</text>
+    <text x="816" y="365">GBS CSync</text>
+    <text x="414" y="435">100</text>
+    <text x="480" y="474">GND</text>
+  </g>
+  <text x="36" y="520" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">Series ohms were not recorded. The drop is about 5 V at the arcade board to about 1 V at the scaler.</text>
+  <text x="36" y="542" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">CSYNC 100 ohm to ground is remembered, not measured. A video termination is often 75 ohm.</text>
+</svg>

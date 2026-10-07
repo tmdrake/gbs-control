@@ -10,8 +10,13 @@ The board in use is a GBS-8200 v4. The first source is a Primal Rage arcade boar
 
 Two changes on the scaler, and nothing else.
 
-- Series resistors are inline on the RGB inputs. They attenuate the arcade video so it sits in the range the GBS analog input expects. The resistor values are not written down in this repo.
-- An Si5351 clock board replaces the stock crystal path. The firmware leaves that clock enabled. Frame Time Lock uses it to hold the output frame to the game frame.
+Red, green, and blue each pass through a series resistor. The ohms were not written down. The arcade video is about 5 V, and it arrives at the scaler at about 1 V. CSYNC is the only termination: about 100 ohm from that pin to ground. That 100 ohm figure is remembered, not measured. A video termination is often 75 ohm.
+
+![Video input](images/input-termination.svg)
+
+An Si5351 breakout replaces the stock clock. Clock output 0 goes to TV5725 pin 40. SDA and SCL share the scaler I2C bus, and the chip answers at address `0x60`. The firmware leaves that clock enabled. Frame Time Lock tunes it.
+
+![Si5351 clock](images/si5351-clock.svg)
 
 This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliuk/gbs-control-complete) 1.4.0. The scaler core is [ramapcsx2/gbs-control](https://github.com/ramapcsx2/gbs-control) at `e4e317a`. GitHub does not list this repository as a fork of either project. The code was committed from a snapshot, then changed for this board.
 
