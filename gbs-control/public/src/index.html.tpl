@@ -608,6 +608,47 @@
               </div>
             </div>
           </fieldset> -->
+          <fieldset class="gbs-fieldset">
+            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
+              <div class="gbs-icon">timer</div>
+              <div>Frame Time Lock</div>
+            </legend>
+            <!-- prettier-ignore -->
+            <ul class="gbs-help">
+              <li>Keeps the game frame and the output frame the same length, so a tear line does not crawl through the picture.</li>
+              <li>VTotal + VSST also shifts the vertical sync. VTotal only changes the frame length. If the screen goes blank or jumps, use the other one.</li>
+            </ul>
+            <div class="gbs-flex gbs-margin__bottom--16">
+              <button
+                gbs-message="5"
+                gbs-message-type="user"
+                gbs-click="normal"
+                gbs-toggle="frameTimeLock"
+                class="gbs-button gbs-button__control gbs-button__secondary"
+              >
+                <div class="gbs-icon">timer</div>
+                <div>Frame Lock</div>
+              </button>
+              <button
+                gbs-message="i"
+                gbs-message-type="user"
+                gbs-click="normal"
+                gbs-toggle-switch="frameTimeLockMethod_vtotal_vsst"
+                class="gbs-button gbs-button__control gbs-button__secondary"
+              >
+                <div>VTotal + VSST</div>
+              </button>
+              <button
+                gbs-message="I"
+                gbs-message-type="user"
+                gbs-click="normal"
+                gbs-toggle-switch="frameTimeLockMethod_vtotal_only"
+                class="gbs-button gbs-button__control gbs-button__secondary"
+              >
+                <div>VTotal</div>
+              </button>
+            </div>
+          </fieldset>
           <div class="gbs-flex gbs-margin__bottom--16">
             <button
               gbs-message="7"

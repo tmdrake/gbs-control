@@ -6,7 +6,7 @@ This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliu
 
 ## This board
 
-GBS-8200 v4 with an Si5351 clock chip and a Primal Rage arcade board on the RGB input. The page title is GBS-Controls. The board sends the DHCP hostname `gbscontrol`, so the router can answer `http://gbscontrol.local`. Darker and brighter move the input gain by 8. Backup and restore use `gbs-control.cfg`. The over-the-air update button is not on the page.
+GBS-8200 v4 with an Si5351 clock chip and a Primal Rage arcade board on the RGB input. The page title is GBS-Controls. The board sends the DHCP hostname `gbscontrol`, so the router can answer `http://gbscontrol.local`. Darker and brighter move the input gain by 8. Backup and restore use `gbs-control.cfg`. Frame Time Lock is on the Picture page. The over-the-air update button is not on the page.
 
 ## Ignore VSync
 
