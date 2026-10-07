@@ -4,7 +4,14 @@ A simple web page for a GBS-8200 used as a CSYNC RGB upscaler. GPL-3.0.
 
 The hardware was built to take composite-sync RGB, the signal an arcade board puts on one sync pin, and scale it for a modern display. This spinoff keeps that job on one page. There is no OLED and no encoder. The web page is the control.
 
-The board in use is a GBS-8200 v4 with an Si5351 clock chip. The first source is a Primal Rage arcade board. The page title is GBS-Controls.
+The board in use is a GBS-8200 v4. The first source is a Primal Rage arcade board. The page title is GBS-Controls.
+
+## Hardware
+
+Two changes on the scaler, and nothing else.
+
+- Series resistors are inline on the RGB inputs. They attenuate the arcade video so it sits in the range the GBS analog input expects. The resistor values are not written down in this repo.
+- An Si5351 clock board replaces the stock crystal path. The firmware leaves that clock enabled. Frame Time Lock uses it to hold the output frame to the game frame.
 
 This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliuk/gbs-control-complete) 1.4.0. The scaler core is [ramapcsx2/gbs-control](https://github.com/ramapcsx2/gbs-control) at `e4e317a`. GitHub does not list this repository as a fork of either project. The code was committed from a snapshot, then changed for this board.
 
