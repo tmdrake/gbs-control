@@ -9685,9 +9685,16 @@ static void webLog(AsyncWebServerRequest *request, const char *what)
     Serial.printf("web %s heap=%u -> %s\n", request->url().c_str(), ESP.getFreeHeap(), what);
 }
 
-static bool webuiCaptiveHtml(const String &url)
+static bool webuiCaptiveCheck(const String &url)
 {
-    return url.endsWith(F("hotspot-detect.html")) || url.indexOf(F("/library/test/")) >= 0;
+    // These are the probes a phone uses to decide whether to show the
+    // sign-in sheet. An empty 204 means "the internet works", so Android
+    // never opens the control page. A redirect does.
+    return url.endsWith(F("generate_204")) || url.endsWith(F("gen_204"))
+        || url.endsWith(F("hotspot-detect.html")) || url.indexOf(F("/library/test/")) >= 0
+        || url.endsWith(F("connecttest.txt")) || url.endsWith(F("ncsi.txt"))
+        || url.endsWith(F("success.txt")) || url.endsWith(F("canonical.html"))
+        || url.indexOf(F("/kindle-wifi/")) >= 0;
 }
 
 static void sendWebuiPage(AsyncWebServerRequest *request)
@@ -9729,10 +9736,9 @@ static void sendWebuiFallback(AsyncWebServerRequest *request)
         request->send(404, "text/plain", "not found");
         return;
     }
-    // The phone's captive check is the one request that should open the
-    // control page. Every other probe stays empty so it does not start
-    // another copy of the 250 kB body.
-    if (webuiCaptiveHtml(request->url())) {
+    // Connectivity checks open the control page. Icons and anything else
+    // stay empty so they do not start another copy of the 250 kB body.
+    if (webuiCaptiveCheck(request->url())) {
         webLog(request, "302");
         request->redirect("/");
         return;
