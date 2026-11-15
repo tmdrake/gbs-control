@@ -9721,28 +9721,109 @@ static void sendPortalOk(AsyncWebServerRequest *request)
     request->send(204);
 }
 
+// The library's PROGMEM response stops after the first buffer on a phone.
+// This writer copies the flash page straight into whatever TCP space is free
+// and says how far it got, so a stall is visible on the serial log.
+class WebuiPageResponse : public AsyncWebServerResponse {
+public:
+    WebuiPageResponse() : _headSent(0), _pos(0), _logged(0) {
+        _code = 200;
+        setContentType("text/html");
+        setContentLength(webui_html_len);
+        addHeader("Content-Encoding", "gzip");
+    }
+
+    void _respond(AsyncWebServerRequest *request) override {
+        addHeader("Connection", "close", false);
+        _assembleHead(_head, request->version());
+        _state = RESPONSE_HEADERS;
+        pump(request);
+    }
+
+    size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time) override {
+        (void)len;
+        (void)time;
+        return pump(request);
+    }
+
+private:
+    String _head;
+    size_t _headSent;
+    size_t _pos;
+    size_t _logged;
+
+    size_t pump(AsyncWebServerRequest *request) {
+        AsyncClient *client = request->client();
+        if (client == nullptr) {
+            return 0;
+        }
+        size_t wrote = 0;
+        for (uint8_t guard = 0; guard < 12 && client->space() > 0; guard++) {
+            if (_state == RESPONSE_HEADERS) {
+                size_t left = _head.length() - _headSent;
+                if (left == 0) {
+                    _state = RESPONSE_CONTENT;
+                    _head = String();
+                    continue;
+                }
+                size_t n = client->add(_head.c_str() + _headSent, left);
+                if (n == 0) {
+                    break;
+                }
+                _headSent += n;
+                wrote += n;
+                continue;
+            }
+            if (_state != RESPONSE_CONTENT) {
+                break;
+            }
+            if (_pos >= webui_html_len) {
+                _state = RESPONSE_END;
+                Serial.printf("web / done %u\n", (unsigned)webui_html_len);
+                break;
+            }
+            size_t n = webui_html_len - _pos;
+            if (n > client->space()) {
+                n = client->space();
+            }
+            if (n > 256) {
+                n = 256;
+            }
+            char tmp[256];
+            memcpy_P(tmp, webui_html + _pos, n);
+            size_t put = client->add(tmp, n);
+            if (put == 0) {
+                break;
+            }
+            _pos += put;
+            wrote += put;
+            if (_pos - _logged >= 16384) {
+                _logged = _pos;
+                Serial.printf("web / sent %u/%u\n", (unsigned)_pos, (unsigned)webui_html_len);
+            }
+        }
+        if (wrote) {
+            client->send();
+        }
+        return wrote;
+    }
+};
+
 static void sendWebuiPage(AsyncWebServerRequest *request)
 {
-    // One 250 kB body at a time. A second copy, from a phone probe that
-    // followed a redirect, uses up the few TCP buffers and neither finishes.
+    // One 250 kB body at a time. A second copy uses up the few TCP buffers
+    // and neither finishes.
     if (webuiPageBusy) {
         webLog(request, "busy");
         request->send(503, "text/plain", "busy, retry");
         return;
     }
-    AsyncWebServerResponse *response = nullptr;
-    // The gzip body is already in flash. new does not return null on this
-    // core: it aborts if the response object cannot be allocated. Stay above
-    // that, and still answer when the page itself cannot be sent.
-    if (ESP.getFreeHeap() > 4000) {
-        response = request->beginResponse_P(200, "text/html", webui_html, webui_html_len);
-    }
-    if (response == nullptr) {
+    if (ESP.getFreeHeap() <= 4000) {
         webLog(request, "nomem");
         request->send(503, "text/plain", "busy, retry");
         return;
     }
-    response->addHeader("Content-Encoding", "gzip");
+    WebuiPageResponse *response = new WebuiPageResponse();
     webuiPageBusy = 1;
     request->onDisconnect([]() {
         webuiPageBusy = 0;
