@@ -9733,6 +9733,10 @@ public:
         addHeader("Content-Encoding", "gzip");
     }
 
+    bool _sourceValid() const override {
+        return true;
+    }
+
     void _respond(AsyncWebServerRequest *request) override {
         addHeader("Connection", "close", false);
         _assembleHead(_head, request->version());
