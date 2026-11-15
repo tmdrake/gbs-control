@@ -9732,6 +9732,12 @@ public:
         setContentType("text/html");
         setContentLength(webui_html_len);
         addHeader("Content-Encoding", "gzip");
+        // The browser was downloading this 250 kB file on every open. Keep it
+        // so a reload is a short check instead of another full copy.
+        addHeader("Cache-Control", "public, max-age=86400");
+        char etag[16];
+        snprintf(etag, sizeof(etag), "\"%u\"", (unsigned)webui_html_len);
+        addHeader("ETag", etag);
     }
 
     bool _sourceValid() const override {
@@ -9831,7 +9837,6 @@ size_t WebuiPageResponse::pump()
 }
 
 static WebuiPageResponse *webuiPage = nullptr;
-static WebuiPageResponse *webuiToClose = nullptr;
 
 AsyncClient *WebuiPageResponse::detach()
 {
@@ -9845,14 +9850,6 @@ void webuiPumpPage()
 {
     // Close from the main loop, after detach has returned. close() can
     // delete the response, so nothing may touch it after that call.
-    if (webuiToClose != nullptr) {
-        WebuiPageResponse *old = webuiToClose;
-        webuiToClose = nullptr;
-        AsyncClient *client = old->detach();
-        if (client != nullptr) {
-            client->close();
-        }
-    }
     if (webuiPage == nullptr) {
         return;
     }
@@ -9861,25 +9858,51 @@ void webuiPumpPage()
         webuiPage = nullptr;
         AsyncClient *client = done->detach();
         if (client != nullptr) {
-            client->close();
+            // The bytes are already queued. Abort instead of a graceful
+            // close that held the loop long enough to trip the watchdog.
+            client->close(true);
         }
         return;
     }
     webuiPage->pump();
 }
 
+static bool webuiPageCached(AsyncWebServerRequest *request)
+{
+    if (!request->hasHeader(F("If-None-Match"))) {
+        return false;
+    }
+    char etag[16];
+    snprintf(etag, sizeof(etag), "\"%u\"", (unsigned)webui_html_len);
+    return request->header(F("If-None-Match")).indexOf(etag) >= 0;
+}
+
 static void sendWebuiPage(AsyncWebServerRequest *request)
 {
-    // A phone often opens the page twice. The second one used to be told
-    // "busy", and that text is what stayed on the screen. Let the newest
-    // request have the page.
+    if (webuiPageCached(request)) {
+        webLog(request, "304");
+        AsyncWebServerResponse *cached = request->beginResponse(304);
+        if (cached == nullptr) {
+            request->send(304);
+            return;
+        }
+        cached->addHeader("Cache-Control", "public, max-age=86400");
+        char etag[16];
+        snprintf(etag, sizeof(etag), "\"%u\"", (unsigned)webui_html_len);
+        cached->addHeader("ETag", etag);
+        request->send(cached);
+        return;
+    }
+    // A second copy while the first is still going out is what walked the
+    // free memory down to an out-of-memory reset. Leave the first one alone.
     if (webuiPage != nullptr) {
-        webuiToClose = webuiPage;
-        webuiPage = nullptr;
+        webLog(request, "skip");
+        request->send(204);
+        return;
     }
     if (ESP.getFreeHeap() <= 4000) {
         webLog(request, "nomem");
-        request->send(503, "text/plain", "busy, retry");
+        request->send(503);
         return;
     }
     WebuiPageResponse *response = new WebuiPageResponse();
