@@ -9727,7 +9727,7 @@ static void sendPortalOk(AsyncWebServerRequest *request)
 // and says how far it got, so a stall is visible on the serial log.
 class WebuiPageResponse : public AsyncWebServerResponse {
 public:
-    WebuiPageResponse() : _tcp(nullptr), _headSent(0), _pos(0), _logged(0) {
+    WebuiPageResponse() : _tcp(nullptr), _headSent(0), _pos(0), _logged(0), _sentAll(false) {
         _code = 200;
         setContentType("text/html");
         setContentLength(webui_html_len);
@@ -9754,7 +9754,8 @@ public:
     }
 
     size_t pump();
-    void abandon();
+    bool sentAll() const { return _sentAll; }
+    AsyncClient *detach();
 
 private:
     AsyncClient *_tcp;
@@ -9762,6 +9763,7 @@ private:
     size_t _headSent;
     size_t _pos;
     size_t _logged;
+    bool _sentAll;
 };
 
 size_t WebuiPageResponse::pump()
@@ -9794,8 +9796,12 @@ size_t WebuiPageResponse::pump()
                 break;
             }
             if (_pos >= webui_html_len) {
-                _state = RESPONSE_END;
-                Serial.printf("web / done %u\n", (unsigned)webui_html_len);
+                // Do not close here. This runs inside the TCP callback, and
+                // closing from there reset the chip with exception 9.
+                if (!_sentAll) {
+                    _sentAll = true;
+                    Serial.printf("web / done %u\n", (unsigned)webui_html_len);
+                }
                 break;
             }
             size_t n = webui_html_len - _pos;
@@ -9825,22 +9831,41 @@ size_t WebuiPageResponse::pump()
 }
 
 static WebuiPageResponse *webuiPage = nullptr;
+static WebuiPageResponse *webuiToClose = nullptr;
 
-void WebuiPageResponse::abandon()
+AsyncClient *WebuiPageResponse::detach()
 {
     AsyncClient *client = _tcp;
     _tcp = nullptr;
     _state = RESPONSE_END;
-    if (client != nullptr) {
-        client->close();
-    }
+    return client;
 }
 
 void webuiPumpPage()
 {
-    if (webuiPage != nullptr) {
-        webuiPage->pump();
+    // Close from the main loop, after detach has returned. close() can
+    // delete the response, so nothing may touch it after that call.
+    if (webuiToClose != nullptr) {
+        WebuiPageResponse *old = webuiToClose;
+        webuiToClose = nullptr;
+        AsyncClient *client = old->detach();
+        if (client != nullptr) {
+            client->close();
+        }
     }
+    if (webuiPage == nullptr) {
+        return;
+    }
+    if (webuiPage->sentAll()) {
+        WebuiPageResponse *done = webuiPage;
+        webuiPage = nullptr;
+        AsyncClient *client = done->detach();
+        if (client != nullptr) {
+            client->close();
+        }
+        return;
+    }
+    webuiPage->pump();
 }
 
 static void sendWebuiPage(AsyncWebServerRequest *request)
@@ -9849,9 +9874,8 @@ static void sendWebuiPage(AsyncWebServerRequest *request)
     // "busy", and that text is what stayed on the screen. Let the newest
     // request have the page.
     if (webuiPage != nullptr) {
-        WebuiPageResponse *old = webuiPage;
+        webuiToClose = webuiPage;
         webuiPage = nullptr;
-        old->abandon();
     }
     if (ESP.getFreeHeap() <= 4000) {
         webLog(request, "nomem");
