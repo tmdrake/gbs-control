@@ -9676,18 +9676,29 @@ WiFiEventHandler disconnectedEventHandler;
 // handler returns without request->send(). A phone opens the page, the
 // icons, and the captive-portal checks together. That used to miss the
 // 10 kB heap gate and leave the browser on that sentence.
-static bool webuiStatusProbe(const String &url)
+static uint8_t webuiPageBusy = 0;
+
+static void webLog(AsyncWebServerRequest *request, const char *what)
 {
-    if (url.indexOf(F("favicon")) >= 0 || url.indexOf(F("apple-touch-icon")) >= 0 || url.endsWith(F(".ico"))) {
-        return true;
-    }
-    // Status checks only. An empty 204 is not shown as a page, and it does
-    // not pull the control page down on the same burst of connections.
-    return url.endsWith(F("generate_204")) || url.endsWith(F("gen_204")) || url.endsWith(F("connecttest.txt")) || url.endsWith(F("ncsi.txt")) || url.endsWith(F("success.txt"));
+    // USB serial only. Copying this onto the websocket would start another
+    // send while the phone is waiting for the page.
+    Serial.printf("web %s heap=%u -> %s\n", request->url().c_str(), ESP.getFreeHeap(), what);
+}
+
+static bool webuiCaptiveHtml(const String &url)
+{
+    return url.endsWith(F("hotspot-detect.html")) || url.indexOf(F("/library/test/")) >= 0;
 }
 
 static void sendWebuiPage(AsyncWebServerRequest *request)
 {
+    // One 250 kB body at a time. A second copy, from a phone probe that
+    // followed a redirect, uses up the few TCP buffers and neither finishes.
+    if (webuiPageBusy) {
+        webLog(request, "busy");
+        request->send(503, "text/plain", "busy, retry");
+        return;
+    }
     AsyncWebServerResponse *response = nullptr;
     // The gzip body is already in flash. new does not return null on this
     // core: it aborts if the response object cannot be allocated. Stay above
@@ -9696,10 +9707,16 @@ static void sendWebuiPage(AsyncWebServerRequest *request)
         response = request->beginResponse_P(200, "text/html", webui_html, webui_html_len);
     }
     if (response == nullptr) {
+        webLog(request, "nomem");
         request->send(503, "text/plain", "busy, retry");
         return;
     }
     response->addHeader("Content-Encoding", "gzip");
+    webuiPageBusy = 1;
+    request->onDisconnect([]() {
+        webuiPageBusy = 0;
+    });
+    webLog(request, "page");
     request->send(response);
 }
 
@@ -9708,16 +9725,20 @@ static void sendWebuiFallback(AsyncWebServerRequest *request)
     const WebRequestMethod method = request->method();
     const bool getOrHead = (method == HTTP_GET) || (method == HTTP_HEAD);
     if (!getOrHead) {
+        webLog(request, "404");
         request->send(404, "text/plain", "not found");
         return;
     }
-    if (webuiStatusProbe(request->url())) {
-        request->send(204);
+    // The phone's captive check is the one request that should open the
+    // control page. Every other probe stays empty so it does not start
+    // another copy of the 250 kB body.
+    if (webuiCaptiveHtml(request->url())) {
+        webLog(request, "302");
+        request->redirect("/");
         return;
     }
-    // Other GET/HEAD, including the captive-portal HTML checks, land on the
-    // control page. This is not a separate sign-in page.
-    request->redirect("/");
+    webLog(request, "204");
+    request->send(204);
 }
 
 void startWebserver()
