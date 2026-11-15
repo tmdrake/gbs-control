@@ -20,6 +20,36 @@ An Si5351 breakout replaces the stock clock. Clock output 0 goes to TV5725 pin 4
 
 This tree starts from [cpawliuk/gbs-control-complete](https://github.com/cpawliuk/gbs-control-complete) 1.4.0. The scaler core is [ramapcsx2/gbs-control](https://github.com/ramapcsx2/gbs-control) at `e4e317a`. GitHub does not list this repository as a fork of either project. The code was committed from a snapshot, then changed for this board.
 
+## Upscaler engine
+
+![Upscaler engine](images/upscaler-engine.svg)
+
+The TV5725 does the scaling. The ESP8266 writes registers over I2C. It does not sit in the pixel path.
+
+### Pixel path
+
+Red, green, and blue enter the triple ADC at about 1 V. On a 15 kHz source the sample clock runs at 4× the pixel rate, and the decimator folds those samples back to one sample per pixel. The capture window writes the active picture into line memory. Move, size, and crop on the web page are that window.
+
+A 240p game is already one progressive field, so the deinterlacer stays off. A 480i field turns on motion-adaptive deinterlace.
+
+The scaler then builds its own raster. On this board that raster is 1280×960 at 60 Hz, with peaking, scanlines, and contrast (`VDS_Y_GAIN`) applied on the way out. The video DAC turns it back into analog red, green, and blue, plus separate horizontal and vertical sync. A VGA-to-HDMI converter after the GBS makes the HDMI picture. Display Data Channel stays between that converter and the TV.
+
+### Sync slicer
+
+Composite sync is a voltage, not a logic bit. The sync tip swings toward ground. The rest of the line sits higher. The slicer is a comparator in the ADC. Its output is the digital edge the sync processor times from.
+
+`ADC_SOGCTRL` is the threshold, 5 bits. The firmware comment records about 10 mV per step, from about 10 mV to about 320 mV. Level 6 is about 60 mV, the setting it calls a standard cable. This board holds level 13, about 130 mV, on a 15 kHz arcade source. A higher level waits for a deeper tip. A lower level trips on a shallower tip, and also on noise.
+
+The sync processor then measures that edge: line count, pulse width, and whether horizontal sync is present. Coast tells it to keep counting through a missing pulse. Clamp uses the back porch to put black at a known ADC code.
+
+`optimizeSogLevel()` starts at 13 and steps down only while horizontal sync is absent. It stops at the first level that holds the edge. A Namco C137, which is that board’s NTSC sync generator, still draws a full frame while the pulse width glitches. The same thing happens on a board that XORs horizontal and vertical sync onto one pin. Stepping the threshold down on every glitch walks it off the real pulse in about a minute, and the picture drops. With **Ignore VSync** on, a frame that is still about 250 to 280 lines, or 300 to 330 lines for PAL, and that still has horizontal sync, keeps the current slicer level.
+
+### Clocks
+
+The sample-clock PLL locks to the recovered horizontal sync and decides how many ADC clocks fit on a line.
+
+The output raster has its own clock. An Si5351 breakout drives TV5725 pin 40 and replaces the chip’s PLL648. Frame Lock measures the game frame and trims that Si5351 frequency until the output frame is the same length, so a tear line does not crawl.
+
 ## Open the page
 
 The open access point is `gbscontrol`, with no password. From the phone, open `http://192.168.4.1`.

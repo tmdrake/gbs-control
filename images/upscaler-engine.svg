@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#1a1a1a"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="900" fill="#f7f6f2"/>
+  <text x="36" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#1a1a1a">GBS-8200 upscaler engine</text>
+  <text x="36" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">Solid arrows are the picture. The sample clock and the display clock are separate. The ESP8266 only writes registers.</text>
+
+  <text x="56" y="96" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">R, G, B · about 1 V after the series resistors</text>
+  <text x="400" y="96" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">CSYNC · 100 ohm to ground</text>
+
+  <rect x="28" y="148" width="1144" height="500" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="44" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">TV5725</text>
+
+  <g fill="#fff" stroke="#1a1a1a" stroke-width="2">
+    <rect x="48" y="188" width="250" height="108"/>
+    <rect x="360" y="188" width="270" height="108"/>
+    <rect x="692" y="188" width="270" height="108"/>
+    <rect x="1010" y="188" width="140" height="108"/>
+    <rect x="692" y="328" width="270" height="78"/>
+    <rect x="48" y="436" width="210" height="100"/>
+    <rect x="286" y="436" width="200" height="100"/>
+    <rect x="514" y="436" width="210" height="100"/>
+    <rect x="752" y="424" width="396" height="124"/>
+    <rect x="752" y="568" width="250" height="64"/>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#1a1a1a">
+    <text x="64" y="214" font-size="16">ADC</text>
+    <text x="64" y="236" font-size="13">8-bit red, green, blue</text>
+    <text x="64" y="256" font-size="13">up to 160 MHz</text>
+    <text x="64" y="276" font-size="13">clocked by the sample PLL</text>
+
+    <text x="376" y="214" font-size="16">Sync slicer</text>
+    <text x="376" y="236" font-size="13">comparator on CSYNC</text>
+    <text x="376" y="256" font-size="13">about 10 mV per step</text>
+    <text x="376" y="276" font-size="13">level 13 is about 130 mV</text>
+
+    <text x="708" y="214" font-size="16">Sync processor</text>
+    <text x="708" y="236" font-size="13">coast and clamp</text>
+    <text x="708" y="256" font-size="13">line count, pulse width</text>
+    <text x="708" y="276" font-size="13">horizontal sync present</text>
+
+    <text x="1024" y="214" font-size="16">Mode detect</text>
+    <text x="1024" y="236" font-size="13">15 kHz, 31 kHz,</text>
+    <text x="1024" y="256" font-size="13">or HD</text>
+    <text x="1024" y="276" font-size="13">picks the preset</text>
+
+    <text x="708" y="354" font-size="16">Sample-clock PLL</text>
+    <text x="708" y="376" font-size="13">locks to recovered H sync</text>
+    <text x="708" y="396" font-size="13">sets pixels per line</text>
+
+    <text x="64" y="462" font-size="16">Decimator</text>
+    <text x="64" y="484" font-size="13">15 kHz sampled at 4×</text>
+    <text x="64" y="504" font-size="13">folded to one sample</text>
+    <text x="64" y="524" font-size="13">per pixel</text>
+
+    <text x="302" y="462" font-size="16">Capture</text>
+    <text x="302" y="484" font-size="13">line memory</text>
+    <text x="302" y="504" font-size="13">crop and position</text>
+    <text x="302" y="524" font-size="13">are this window</text>
+
+    <text x="530" y="462" font-size="16">Deinterlacer</text>
+    <text x="530" y="484" font-size="13">off for 240p</text>
+    <text x="530" y="504" font-size="13">motion adaptive</text>
+    <text x="530" y="524" font-size="13">on a 480i field</text>
+
+    <text x="768" y="450" font-size="16">Scaler</text>
+    <text x="768" y="472" font-size="13">free-running output raster</text>
+    <text x="768" y="492" font-size="13">1280×960 at 60 Hz on this board</text>
+    <text x="768" y="512" font-size="13">peaking, scanlines, contrast</text>
+    <text x="768" y="532" font-size="13">its own H and V sync</text>
+
+    <text x="768" y="594" font-size="16">Video DAC</text>
+    <text x="768" y="616" font-size="13">analog R, G, B, separate H and V</text>
+  </g>
+
+  <g stroke="#1a1a1a" stroke-width="2" fill="none">
+    <line x1="140" y1="108" x2="160" y2="188" marker-end="url(#arr)"/>
+    <line x1="460" y1="108" x2="490" y2="188" marker-end="url(#arr)"/>
+    <line x1="298" y1="242" x2="352" y2="242" marker-end="url(#arr)"/>
+    <line x1="630" y1="242" x2="684" y2="242" marker-end="url(#arr)"/>
+    <line x1="962" y1="242" x2="1002" y2="242" marker-end="url(#arr)"/>
+    <line x1="827" y1="296" x2="827" y2="328" marker-end="url(#arr)"/>
+    <line x1="692" y1="367" x2="173" y2="367"/>
+    <line x1="173" y1="367" x2="173" y2="296" marker-end="url(#arr)"/>
+    <line x1="120" y1="296" x2="120" y2="436" marker-end="url(#arr)"/>
+    <line x1="258" y1="486" x2="278" y2="486" marker-end="url(#arr)"/>
+    <line x1="486" y1="486" x2="506" y2="486" marker-end="url(#arr)"/>
+    <line x1="724" y1="486" x2="744" y2="486" marker-end="url(#arr)"/>
+    <line x1="877" y1="548" x2="877" y2="568" marker-end="url(#arr)"/>
+    <line x1="1088" y1="748" x2="1088" y2="548" marker-end="url(#arr)"/>
+  </g>
+  <text x="300" y="359" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">sample clock</text>
+  <text x="1040" y="700" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">pin 40</text>
+
+  <g fill="#fff" stroke="#1a1a1a" stroke-width="2">
+    <rect x="48" y="700" width="300" height="112"/>
+    <rect x="400" y="712" width="360" height="100"/>
+    <rect x="820" y="748" width="328" height="76"/>
+  </g>
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#1a1a1a">
+    <text x="64" y="726" font-size="16">ESP8266</text>
+    <text x="64" y="748" font-size="13">I2C master, GPIO4 and GPIO5</text>
+    <text x="64" y="768" font-size="13">web page, presets, slicer hold</text>
+    <text x="64" y="788" font-size="13">Si5351 answers at 0x60</text>
+    <text x="416" y="738" font-size="16">VGA-to-HDMI converter</text>
+    <text x="416" y="760" font-size="13">outside the GBS</text>
+    <text x="416" y="780" font-size="13">DDC to the TV stays here</text>
+    <text x="836" y="774" font-size="16">Si5351</text>
+    <text x="836" y="796" font-size="13">clock 0 drives pin 40. Frame Lock trims it.</text>
+  </g>
+
+  <line x1="877" y1="632" x2="877" y2="704" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="877" y1="704" x2="760" y2="762" stroke="#1a1a1a" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="890" y="690" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">RGBHV</text>
+  <line x1="200" y1="648" x2="200" y2="700" stroke="#1a1a1a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+  <text x="210" y="676" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">I2C</text>
+
+  <text x="36" y="852" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">The output raster does not follow the game line by line. The scaler keeps drawing 1280×960 while capture takes the next game frame.</text>
+  <text x="36" y="874" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">Frame Lock lengthens or shortens that output frame, through the Si5351, until the two frames are the same length.</text>
+</svg>
