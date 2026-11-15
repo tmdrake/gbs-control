@@ -80,15 +80,13 @@ void PersWiFiManager::startApMode()
     _apPass.length() ? WiFi.softAP(getApSsid().c_str(), _apPass.c_str(), 11) : WiFi.softAP(getApSsid().c_str());
 
     _dnsServer->stop();
-    // set which return code will be used for all other domains (e.g. sending
-    // ServerFailure instead of NonExistentDomain will reduce number of queries
-    // sent by clients)
-    // default is DNSReplyCode::NonExistentDomain
-    //_dnsServer->setErrorReplyCode(DNSReplyCode::ServerFailure);
-    // modify TTL associated  with the domain name (in seconds) // default is 60 seconds
-    _dnsServer->setTTL(300); // (in seconds) as per example
-    //_dnsServer->start((byte)53, device_hostname_full, apIP);
-    _dnsServer->start(53, "*", apIP);
+    // Answer only this device's name. A "*" reply makes every lookup, including
+    // the phone's internet check, land here. The phone then opens its captive
+    // portal browser and that browser fights the control page for the few TCP
+    // connections. Other names get a fast "no such name" so the phone leaves
+    // the access point alone.
+    _dnsServer->setTTL(300);
+    _dnsServer->start(53, device_hostname_full, apIP);
 
     if (_apHandler)
         _apHandler();
