@@ -5874,6 +5874,13 @@ void fastSogAdjust()
     }
 }
 
+// NTSC 15 kHz is about 262 lines, PAL about 312. A few lines of jitter
+// still means the game is drawing, even when the sync pulse width glitches.
+static bool compositeFrameStillPresent(uint16_t lines)
+{
+    return (lines >= 250 && lines <= 280) || (lines >= 300 && lines <= 330);
+}
+
 void runSyncWatcher()
 {
     if (!rto->boardHasPower) {
@@ -5978,7 +5985,15 @@ void runSyncWatcher()
             }
 
             if (badHsActive >= 17) {
-                if (rto->currentLevelSOG >= 2) {
+                uint16_t heldLines = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+                // Glitchy composite sync trips this every few seconds. Each trip
+                // used to lower the slicer, and after about a minute the pulse
+                // was gone even though the game was still drawing.
+                if (uopt->coastThroughMissingVSync &&
+                    GBS::STATUS_SYNC_PROC_HSACT::read() == 1 &&
+                    compositeFrameStillPresent(heldLines)) {
+                    badHsActive = 0;
+                } else if (rto->currentLevelSOG >= 2) {
                     rto->currentLevelSOG -= 1;
                     setAndUpdateSogLevel(rto->currentLevelSOG);
                     delay(30);
@@ -5994,7 +6009,12 @@ void runSyncWatcher()
             }
         } else if (lastAdjustWasInActiveWindow) {
             lastAdjustWasInActiveWindow = 0;
-            if (rto->currentLevelSOG >= 8) {
+            uint16_t heldLines = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+            if (uopt->coastThroughMissingVSync &&
+                GBS::STATUS_SYNC_PROC_HSACT::read() == 1 &&
+                compositeFrameStillPresent(heldLines)) {
+                badHsActive = 0;
+            } else if (rto->currentLevelSOG >= 8) {
                 rto->currentLevelSOG -= 1;
                 setAndUpdateSogLevel(rto->currentLevelSOG);
                 delay(30);
@@ -6007,7 +6027,9 @@ void runSyncWatcher()
 
     // Composite sync often has no long vertical pulse, so mode detect drops
     // while the horizontal period is still good. Coast keeps the preset.
-    bool coastMissingVSync = uopt->coastThroughMissingVSync && detectedVideoMode == 0 && status16SpHsStable && GBS::STATUS_SYNC_PROC_HSACT::read() == 1 && rto->videoStandardInput != 15;
+    uint16_t coastLines = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+    bool coastLinesHeld = compositeFrameStillPresent(coastLines);
+    bool coastMissingVSync = uopt->coastThroughMissingVSync && GBS::STATUS_SYNC_PROC_HSACT::read() == 1 && rto->videoStandardInput != 15 && detectedVideoMode == 0 && (status16SpHsStable || coastLinesHeld);
     if (coastMissingVSync) {
         // Horizontal sync is still there, but the long vertical pulse is not.
         // Hold the last frame and the output timing. Do not hunt, and do not
@@ -6785,13 +6807,26 @@ void runSyncWatcher()
         uint8_t VSHSStatus = 0;
         boolean stable = 0;
         if (rto->syncTypeCsync == true) {
+            uint16_t heldLines = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+            // Same glitch that used to walk the slicer down. Two hundred of these
+            // in a row called setResetParameters() and the picture dropped,
+            // even though the line count never left the 15 kHz frame.
+            bool holdFrame = uopt->coastThroughMissingVSync &&
+                GBS::STATUS_SYNC_PROC_HSACT::read() == 1 &&
+                compositeFrameStillPresent(heldLines);
             if (GBS::STATUS_INT_SOG_BAD::read() == 1) {
                 // STATUS_INT_SOG_BAD = 0x0f bit 0, interrupt reg
-                resetModeDetect();
-                stable = 0;
-                SerialM.print("`");
-                delay(10);
+                if (holdFrame) {
+                    stable = 1;
+                } else {
+                    resetModeDetect();
+                    stable = 0;
+                    SerialM.print("`");
+                    delay(10);
+                }
                 resetInterruptSogBadBit();
+            } else if (holdFrame) {
+                stable = 1;
             } else {
                 stable = 1;
                 VSHSStatus = GBS::STATUS_00::read();
