@@ -44,6 +44,16 @@ The sync processor then measures that edge: line count, pulse width, and whether
 
 `optimizeSogLevel()` starts at 13 and steps down only while horizontal sync is absent. It stops at the first level that holds the edge. A Namco C137, which is that board’s NTSC sync generator, still draws a full frame while the pulse width glitches. The same thing happens on a board that XORs horizontal and vertical sync onto one pin. Stepping the threshold down on every glitch walks it off the real pulse in about a minute, and the picture drops. With **Ignore VSync** on, a frame that is still about 250 to 280 lines, or 300 to 330 lines for PAL, and that still has horizontal sync, keeps the current slicer level.
 
+### Sync slicer voltage
+
+![Sync slicer voltage](images/slicer-voltage.svg)
+
+The drawing is the voltage on the CSYNC pin for one line. The dashed line is the slicer. The tip has to fall through it once. That falling edge is the edge the sync processor counts.
+
+A lower level moves the dashed line up, toward the rest of the waveform. A short glitch and ordinary noise then look like extra sync edges, and the composite-sync lock falls apart. That walk is what **Ignore VSync** stops on a frame that is still there.
+
+The level is not written into the picture slot or `preferencesv2.txt`. Unplugging the game drops horizontal sync, and the next source is searched from level 13 again. A lower voltage found on this game does not become the voltage for another game.
+
 ### Clocks
 
 The sample-clock PLL locks to the recovered horizontal sync and decides how many ADC clocks fit on a line.

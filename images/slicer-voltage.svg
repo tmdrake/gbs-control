@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="680" viewBox="0 0 1080 680">
+  <rect width="1080" height="680" fill="#f7f6f2"/>
+  <text x="36" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#1a1a1a">Sync slicer voltage</text>
+  <text x="36" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">The dashed line is the comparator. The sync tip has to fall through it once per line. That falling edge is the CSYNC edge.</text>
+
+  <g fill="#fff" stroke="#1a1a1a" stroke-width="2">
+    <rect x="36" y="88" width="320" height="430"/>
+    <rect x="380" y="88" width="320" height="430"/>
+    <rect x="724" y="88" width="320" height="430"/>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#1a1a1a">
+    <text x="52" y="118" font-size="16">Level 13, about 130 mV</text>
+    <text x="396" y="118" font-size="16">Walked down</text>
+    <text x="740" y="118" font-size="16">Next game</text>
+  </g>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">
+    <text x="52" y="140">tip crosses once</text>
+    <text x="396" y="140">threshold too close to the line</text>
+    <text x="740" y="140">search starts at 13 again</text>
+  </g>
+
+  <!-- axes -->
+  <g stroke="#1a1a1a" stroke-width="1.5" fill="none">
+    <line x1="78" y1="175" x2="78" y2="450"/>
+    <line x1="422" y1="175" x2="422" y2="450"/>
+    <line x1="766" y1="175" x2="766" y2="450"/>
+  </g>
+
+  <!-- resting level -->
+  <g stroke="#bbbbb3" stroke-width="1" fill="none">
+    <line x1="78" y1="210" x2="330" y2="210"/>
+    <line x1="422" y1="210" x2="674" y2="210"/>
+    <line x1="766" y1="210" x2="1018" y2="210"/>
+  </g>
+
+  <!-- thresholds -->
+  <g stroke="#1a1a1a" stroke-width="2" fill="none" stroke-dasharray="7 5">
+    <line x1="78" y1="330" x2="330" y2="330"/>
+    <line x1="422" y1="245" x2="674" y2="245"/>
+    <line x1="766" y1="330" x2="1018" y2="330"/>
+  </g>
+
+  <!-- good pulse: one deep tip -->
+  <polyline fill="none" stroke="#1a1a1a" stroke-width="2.5" points="90,210 150,210 162,430 230,430 242,210 330,210"/>
+  <!-- walked-down: deep tip plus a bump and a runt that cross the high threshold -->
+  <polyline fill="none" stroke="#1a1a1a" stroke-width="2.5" points="434,210 470,210 478,280 500,210 520,210 528,430 575,430 584,210 610,210 618,290 640,200 656,210 674,210"/>
+  <!-- next game: deep tip again, same 130 mV line -->
+  <polyline fill="none" stroke="#1a1a1a" stroke-width="2.5" points="778,210 838,210 850,430 918,430 930,210 1018,210"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#1a1a1a">
+    <text x="86" y="202">rest</text>
+    <text x="168" y="424">tip</text>
+    <text x="250" y="322">130 mV</text>
+    <text x="430" y="202">rest</text>
+    <text x="536" y="424">tip</text>
+    <text x="560" y="237">lower mV</text>
+    <text x="774" y="202">rest</text>
+    <text x="856" y="424">tip</text>
+    <text x="938" y="322">130 mV</text>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#1a1a1a">
+    <text x="52" y="484">One falling edge. CSYNC locks.</text>
+    <text x="396" y="484">Extra falling edges. Lock drops.</text>
+    <text x="740" y="484">Level 13 is not saved.</text>
+  </g>
+
+  <text x="36" y="560" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">A lower level moves the dashed line up. Noise and a short glitch then count as sync, and the composite-sync edge breaks up.</text>
+  <text x="36" y="584" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">Ignore VSync keeps 130 mV while horizontal sync is present and the frame is still about 262 lines, or about 312 for PAL.</text>
+  <text x="36" y="608" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#444">The number lives only while that source is connected. The next game is measured from level 13 again.</text>
+  <text x="36" y="648" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#444">Higher on the drawing is a higher voltage. The tip swings toward ground. About 10 mV per step, from about 10 mV to about 320 mV.</text>
+</svg>
