@@ -9667,6 +9667,54 @@ void handleType2Command(char argument)
 
 WiFiEventHandler disconnectedEventHandler;
 
+// ESPAsyncWebServer answers "Handler did not handle the request" when a
+// handler returns without request->send(). A phone opens the page, the
+// icons, and the captive-portal checks together. That used to miss the
+// 10 kB heap gate and leave the browser on that sentence.
+static bool webuiStatusProbe(const String &url)
+{
+    if (url.indexOf(F("favicon")) >= 0 || url.indexOf(F("apple-touch-icon")) >= 0 || url.endsWith(F(".ico"))) {
+        return true;
+    }
+    // Status checks only. An empty 204 is not shown as a page, and it does
+    // not pull the control page down on the same burst of connections.
+    return url.endsWith(F("generate_204")) || url.endsWith(F("gen_204")) || url.endsWith(F("connecttest.txt")) || url.endsWith(F("ncsi.txt")) || url.endsWith(F("success.txt"));
+}
+
+static void sendWebuiPage(AsyncWebServerRequest *request)
+{
+    AsyncWebServerResponse *response = nullptr;
+    // The gzip body is already in flash. new does not return null on this
+    // core: it aborts if the response object cannot be allocated. Stay above
+    // that, and still answer when the page itself cannot be sent.
+    if (ESP.getFreeHeap() > 4000) {
+        response = request->beginResponse_P(200, "text/html", webui_html, webui_html_len);
+    }
+    if (response == nullptr) {
+        request->send(503, "text/plain", "busy, retry");
+        return;
+    }
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+}
+
+static void sendWebuiFallback(AsyncWebServerRequest *request)
+{
+    const WebRequestMethod method = request->method();
+    const bool getOrHead = (method == HTTP_GET) || (method == HTTP_HEAD);
+    if (!getOrHead) {
+        request->send(404, "text/plain", "not found");
+        return;
+    }
+    if (webuiStatusProbe(request->url())) {
+        request->send(204);
+        return;
+    }
+    // Other GET/HEAD, including the captive-portal HTML checks, land on the
+    // control page. This is not a separate sign-in page.
+    request->redirect("/");
+}
+
 void startWebserver()
 {
     persWM.setApCredentials(ap_ssid, ap_password);
@@ -9695,23 +9743,18 @@ void startWebserver()
         Serial.println(event.reason);
     });
 
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        //Serial.println("sending web page");
-        if (ESP.getFreeHeap() > 10000) {
-            AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", webui_html, webui_html_len);
-            response->addHeader("Content-Encoding", "gzip");
-            request->send(response);
-        }
+    server.on("/", HTTP_GET | HTTP_HEAD, [](AsyncWebServerRequest *request) {
+        sendWebuiPage(request);
     });
 
     server.on("/sc", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (ESP.getFreeHeap() > 10000) {
-            int params = request->params();
-            //Serial.print("got serial request params: ");
-            //Serial.println(params);
-            if (params > 0) {
-                const AsyncWebParameter *p = request->getParam((size_t)0);
-                //Serial.println(p->name());
+        int params = request->params();
+        //Serial.print("got serial request params: ");
+        //Serial.println(params);
+        if (params > 0) {
+            const AsyncWebParameter *p = request->getParam((size_t)0);
+            //Serial.println(p->name());
+            if (p != nullptr) {
                 serialCommand = p->name().charAt(0);
 
                 // hack, problem with '+' command received via url param
@@ -9719,22 +9762,22 @@ void startWebserver()
                     serialCommand = '+';
                 }
             }
-            request->send(200); // reply
         }
+        request->send(200); // reply
     });
 
     server.on("/uc", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (ESP.getFreeHeap() > 10000) {
-            int params = request->params();
-            //Serial.print("got user request params: ");
-            //Serial.println(params);
-            if (params > 0) {
-                const AsyncWebParameter *p = request->getParam((size_t)0);
-                //Serial.println(p->name());
+        int params = request->params();
+        //Serial.print("got user request params: ");
+        //Serial.println(params);
+        if (params > 0) {
+            const AsyncWebParameter *p = request->getParam((size_t)0);
+            //Serial.println(p->name());
+            if (p != nullptr) {
                 userCommand = p->name().charAt(0);
             }
-            request->send(200); // reply
         }
+        request->send(200); // reply
     });
 
     server.on("/wifi/connect", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -9758,31 +9801,49 @@ void startWebserver()
     });
 
     server.on("/bin/slots.bin", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (ESP.getFreeHeap() > 10000) {
-            SlotMetaArray slotsObject;
-            File slotsBinaryFileRead = SPIFFS.open(SLOTS_FILE, "r");
-
-            if (!slotsBinaryFileRead) {
-                File slotsBinaryFileWrite = SPIFFS.open(SLOTS_FILE, "w");
-                for (int i = 0; i < SLOTS_TOTAL; i++) {
-                    slotsObject.slot[i].slot = i;
-                    slotsObject.slot[i].presetID = 0;
-                    slotsObject.slot[i].scanlines = 0;
-                    slotsObject.slot[i].scanlinesStrength = 0;
-                    slotsObject.slot[i].wantVdsLineFilter = false;
-                    slotsObject.slot[i].wantStepResponse = true;
-                    slotsObject.slot[i].wantPeaking = true;
-                    char emptySlotName[25] = "Empty                   ";
-                    strncpy(slotsObject.slot[i].name, emptySlotName, 25);
-                }
-                slotsBinaryFileWrite.write((byte *)&slotsObject, sizeof(slotsObject));
-                slotsBinaryFileWrite.close();
-            } else {
-                slotsBinaryFileRead.close();
-            }
-
-            request->send(SPIFFS, "/slots.bin", "application/octet-stream");
+        // Creating or reading the slot file needs more room than the page.
+        // A short JSON reply still goes out when that work cannot run, so
+        // the phone does not get the library handler error as the body.
+        if (ESP.getFreeHeap() <= 8000) {
+            request->send(503, "application/json", "false");
+            return;
         }
+        SlotMetaArray slotsObject;
+        File slotsBinaryFileRead = SPIFFS.open(SLOTS_FILE, "r");
+
+        if (!slotsBinaryFileRead) {
+            File slotsBinaryFileWrite = SPIFFS.open(SLOTS_FILE, "w");
+            if (!slotsBinaryFileWrite) {
+                request->send(503, "application/json", "false");
+                return;
+            }
+            for (int i = 0; i < SLOTS_TOTAL; i++) {
+                slotsObject.slot[i].slot = i;
+                slotsObject.slot[i].presetID = 0;
+                slotsObject.slot[i].scanlines = 0;
+                slotsObject.slot[i].scanlinesStrength = 0;
+                slotsObject.slot[i].wantVdsLineFilter = false;
+                slotsObject.slot[i].wantStepResponse = true;
+                slotsObject.slot[i].wantPeaking = true;
+                char emptySlotName[25] = "Empty                   ";
+                strncpy(slotsObject.slot[i].name, emptySlotName, 25);
+            }
+            slotsBinaryFileWrite.write((byte *)&slotsObject, sizeof(slotsObject));
+            slotsBinaryFileWrite.close();
+        } else {
+            slotsBinaryFileRead.close();
+        }
+
+        File slotsReady = SPIFFS.open(SLOTS_FILE, "r");
+        if (!slotsReady || slotsReady.size() == 0) {
+            if (slotsReady) {
+                slotsReady.close();
+            }
+            request->send(503, "application/json", "false");
+            return;
+        }
+        slotsReady.close();
+        request->send(SPIFFS, SLOTS_FILE, "application/octet-stream");
     });
 
     server.on("/slot/set", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -10099,6 +10160,10 @@ void startWebserver()
                  uopt->enableFrameTimeLock ? "true" : "false",
                  FrameSync::ready() ? "true" : "false");
         request->send(200, "application/json", buf);
+    });
+
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        sendWebuiFallback(request);
     });
 
     //webSocket.onEvent(webSocketEvent);
