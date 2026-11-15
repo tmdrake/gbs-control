@@ -220,46 +220,40 @@ static uint8_t lastSegment = 0xFF; // GBS segment for direct access
 // serial mirror class for websocket logs
 class SerialMirror : public Stream
 {
+    // A short log line used to disconnect every browser once free memory
+    // fell under 20 kB. A phone sits in that range. Skip the copy instead.
+    void mirrorLog(const uint8_t *data, size_t size)
+    {
+        if (size > 0 && ESP.getFreeHeap() > 6000) {
+            webSocket.broadcastTXT(data, size);
+        }
+    }
+
     size_t write(const uint8_t *data, size_t size)
     {
-        if (ESP.getFreeHeap() > 20000) {
-            webSocket.broadcastTXT(data, size);
-        } else {
-            webSocket.disconnect();
-        }
+        mirrorLog(data, size);
         Serial.write(data, size);
         return size;
     }
 
     size_t write(const char *data, size_t size)
     {
-        if (ESP.getFreeHeap() > 20000) {
-            webSocket.broadcastTXT(data, size);
-        } else {
-            webSocket.disconnect();
-        }
+        mirrorLog(reinterpret_cast<const uint8_t *>(data), size);
         Serial.write(data, size);
         return size;
     }
 
     size_t write(uint8_t data)
     {
-        if (ESP.getFreeHeap() > 20000) {
-            webSocket.broadcastTXT(&data, 1);
-        } else {
-            webSocket.disconnect();
-        }
+        mirrorLog(&data, 1);
         Serial.write(data);
         return 1;
     }
 
     size_t write(char data)
     {
-        if (ESP.getFreeHeap() > 20000) {
-            webSocket.broadcastTXT(&data, 1);
-        } else {
-            webSocket.disconnect();
-        }
+        uint8_t byte = static_cast<uint8_t>(data);
+        mirrorLog(&byte, 1);
         Serial.write(data);
         return 1;
     }
@@ -280,8 +274,20 @@ class SerialMirror : public Stream
 };
 
 SerialMirror SerialM;
+
+// Frame measurement quiets the radio so the timing sample is cleaner.
+// That also drops packets, so leave the radio awake while someone is
+// on the page.
+static bool browserIsConnected()
+{
+    return webSocket.connectedClients() > 0;
+}
 #else
 #define SerialM Serial
+static bool browserIsConnected()
+{
+    return false;
+}
 #endif
 
 #include "framesync.h"
@@ -7811,11 +7817,10 @@ void updateWebSocketData()
                 toSend[5] |= (1 << 3);
             }
 
-            // send ping and stats
-            if (ESP.getFreeHeap() > 14000) {
+            // This 6-byte update is the page's keepalive. Skipping one is
+            // fine. Disconnecting here is what made the link look flaky.
+            if (ESP.getFreeHeap() > 4000) {
                 webSocket.broadcastTXT(toSend, MESSAGE_LEN);
-            } else {
-                webSocket.disconnect();
             }
         }
     }

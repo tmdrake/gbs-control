@@ -2461,6 +2461,7 @@ const GBSControl = {
     wsCheckTimer: 0,
     wsConnectCounter: 0,
     wsNoSuccessConnectingCounter: 0,
+    wsRetryAfter: 0,
     wsTimeout: 0,
 };
 /** websocket services */
@@ -2484,6 +2485,11 @@ const checkWebSocketServer = () => {
             }
         }
         if (!GBSControl.ws) {
+            // A dropped socket used to reconnect every half second, which
+            // kept the chip busy. Wait before opening another one.
+            if (Date.now() < GBSControl.wsRetryAfter) {
+                return;
+            }
             createWebSocket();
         }
     }
@@ -2507,7 +2513,7 @@ const createWebSocket = () => {
         displayWifiWarning(false);
         GBSControl.wsConnectCounter++;
         clearTimeout(GBSControl.wsTimeout);
-        GBSControl.wsTimeout = setTimeout(timeOutWs, 6000);
+        GBSControl.wsTimeout = setTimeout(timeOutWs, 8000);
         GBSControl.isWsActive = true;
         GBSControl.wsNoSuccessConnectingCounter = 0;
     };
@@ -2515,10 +2521,13 @@ const createWebSocket = () => {
         console.log("ws.onclose");
         clearTimeout(GBSControl.wsTimeout);
         GBSControl.isWsActive = false;
+        GBSControl.wsRetryAfter = Date.now() + 2000;
     };
     GBSControl.ws.onmessage = (message) => {
         clearTimeout(GBSControl.wsTimeout);
-        GBSControl.wsTimeout = setTimeout(timeOutWs, 2700);
+        // The chip sends this about once a second. A busy stretch, or one
+        // skipped update, should not look like the link died.
+        GBSControl.wsTimeout = setTimeout(timeOutWs, 8000);
         GBSControl.isWsActive = true;
         const [messageDataAt0, messageDataAt1, messageDataAt2, messageDataAt3, messageDataAt4, messageDataAt5,] = message.data;
         if (messageDataAt0 != "#") {

@@ -122,13 +122,17 @@ private:
         yield();
         ESP.wdtDisable();
         MeasurePeriod::start();
+        bool radioSlept = false;
 
         // typical: 300000 at 80MHz, 600000 at 160MHz
         for (uint32_t i = 0; i < 3000000; i++) {
             if (MeasurePeriod::armed) {
                 MeasurePeriod::armed = 0;
                 delay(7);
-                WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+                if (!browserIsConnected()) {
+                    WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+                    radioSlept = true;
+                }
             }
             if (MeasurePeriod::stopTime > 0) {
                 break;
@@ -137,7 +141,9 @@ private:
         *start = MeasurePeriod::startTime;
         *stop = MeasurePeriod::stopTime;
         ESP.wdtEnable(0);
-        WiFi.setSleepMode(WIFI_NONE_SLEEP);
+        if (radioSlept) {
+            WiFi.setSleepMode(WIFI_NONE_SLEEP);
+        }
 
         if ((*start >= *stop) || *stop == 0 || *start == 0) {
             // ESP.getCycleCount() overflow oder no pulse, just fail this round
@@ -370,13 +376,17 @@ public:
         yield();
         ESP.wdtDisable();
         MeasurePeriod::start();
+        bool radioSlept = false;
 
         // typical: 300000 at 80MHz, 600000 at 160MHz
         for (uint32_t i = 0; i < 3000000; i++) {
             if (MeasurePeriod::armed) {
                 MeasurePeriod::armed = 0;
                 delay(7);
-                WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+                if (!browserIsConnected()) {
+                    WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+                    radioSlept = true;
+                }
             }
             if (MeasurePeriod::stopTime > 0) {
                 break;
@@ -385,7 +395,9 @@ public:
         *start = MeasurePeriod::startTime;
         *stop = MeasurePeriod::stopTime;
         ESP.wdtEnable(0);
-        WiFi.setSleepMode(WIFI_NONE_SLEEP);
+        if (radioSlept) {
+            WiFi.setSleepMode(WIFI_NONE_SLEEP);
+        }
 
         if ((*start >= *stop) || *stop == 0 || *start == 0) {
             // ESP.getCycleCount() overflow oder no pulse, just fail this round
