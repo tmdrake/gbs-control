@@ -7856,8 +7856,11 @@ void myLog(char const* type, char command) {
         type, command, uopt->presetPreference, uopt->presetSlot, rto->presetID);
 }
 
+void webuiPumpPage();
+
 void loop()
 {
+    webuiPumpPage();
     static uint8_t readout = 0;
     static uint8_t segmentCurrent = 255;
     static uint8_t registerCurrent = 255;
@@ -9726,7 +9729,7 @@ static void sendPortalOk(AsyncWebServerRequest *request)
 // and says how far it got, so a stall is visible on the serial log.
 class WebuiPageResponse : public AsyncWebServerResponse {
 public:
-    WebuiPageResponse() : _headSent(0), _pos(0), _logged(0) {
+    WebuiPageResponse() : _tcp(nullptr), _headSent(0), _pos(0), _logged(0) {
         _code = 200;
         setContentType("text/html");
         setContentLength(webui_html_len);
@@ -9740,24 +9743,31 @@ public:
     void _respond(AsyncWebServerRequest *request) override {
         addHeader("Connection", "close", false);
         _assembleHead(_head, request->version());
+        _tcp = request->client();
         _state = RESPONSE_HEADERS;
-        pump(request);
+        pump();
     }
 
     size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time) override {
         (void)len;
         (void)time;
-        return pump(request);
+        _tcp = request->client();
+        return pump();
     }
 
+    size_t pump();
+
 private:
+    AsyncClient *_tcp;
     String _head;
     size_t _headSent;
     size_t _pos;
     size_t _logged;
+};
 
-    size_t pump(AsyncWebServerRequest *request) {
-        AsyncClient *client = request->client();
+size_t WebuiPageResponse::pump()
+{
+        AsyncClient *client = _tcp;
         if (client == nullptr) {
             return 0;
         }
@@ -9770,7 +9780,10 @@ private:
                     _head = String();
                     continue;
                 }
-                size_t n = client->add(_head.c_str() + _headSent, left);
+                // Copy into the TCP stack. Without this the radio keeps a
+                // pointer to a buffer that this function is about to leave,
+                // and the phone stops after the background color.
+                size_t n = client->add(_head.c_str() + _headSent, left, ASYNC_WRITE_FLAG_COPY);
                 if (n == 0) {
                     break;
                 }
@@ -9795,7 +9808,7 @@ private:
             }
             char tmp[256];
             memcpy_P(tmp, webui_html + _pos, n);
-            size_t put = client->add(tmp, n);
+            size_t put = client->add(tmp, n, ASYNC_WRITE_FLAG_COPY);
             if (put == 0) {
                 break;
             }
@@ -9810,8 +9823,16 @@ private:
             client->send();
         }
         return wrote;
+}
+
+static WebuiPageResponse *webuiPage = nullptr;
+
+void webuiPumpPage()
+{
+    if (webuiPage != nullptr) {
+        webuiPage->pump();
     }
-};
+}
 
 static void sendWebuiPage(AsyncWebServerRequest *request)
 {
@@ -9828,8 +9849,10 @@ static void sendWebuiPage(AsyncWebServerRequest *request)
         return;
     }
     WebuiPageResponse *response = new WebuiPageResponse();
+    webuiPage = response;
     webuiPageBusy = 1;
     request->onDisconnect([]() {
+        webuiPage = nullptr;
         webuiPageBusy = 0;
     });
     webLog(request, "page");
