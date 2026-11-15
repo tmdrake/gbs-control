@@ -9679,8 +9679,6 @@ WiFiEventHandler disconnectedEventHandler;
 // handler returns without request->send(). A phone opens the page, the
 // icons, and the captive-portal checks together. That used to miss the
 // 10 kB heap gate and leave the browser on that sentence.
-static uint8_t webuiPageBusy = 0;
-
 static void webLog(AsyncWebServerRequest *request, const char *what)
 {
     // USB serial only. Copying this onto the websocket would start another
@@ -9756,6 +9754,7 @@ public:
     }
 
     size_t pump();
+    void abandon();
 
 private:
     AsyncClient *_tcp;
@@ -9827,6 +9826,16 @@ size_t WebuiPageResponse::pump()
 
 static WebuiPageResponse *webuiPage = nullptr;
 
+void WebuiPageResponse::abandon()
+{
+    AsyncClient *client = _tcp;
+    _tcp = nullptr;
+    _state = RESPONSE_END;
+    if (client != nullptr) {
+        client->close();
+    }
+}
+
 void webuiPumpPage()
 {
     if (webuiPage != nullptr) {
@@ -9836,12 +9845,13 @@ void webuiPumpPage()
 
 static void sendWebuiPage(AsyncWebServerRequest *request)
 {
-    // One 250 kB body at a time. A second copy uses up the few TCP buffers
-    // and neither finishes.
-    if (webuiPageBusy) {
-        webLog(request, "busy");
-        request->send(503, "text/plain", "busy, retry");
-        return;
+    // A phone often opens the page twice. The second one used to be told
+    // "busy", and that text is what stayed on the screen. Let the newest
+    // request have the page.
+    if (webuiPage != nullptr) {
+        WebuiPageResponse *old = webuiPage;
+        webuiPage = nullptr;
+        old->abandon();
     }
     if (ESP.getFreeHeap() <= 4000) {
         webLog(request, "nomem");
@@ -9850,10 +9860,10 @@ static void sendWebuiPage(AsyncWebServerRequest *request)
     }
     WebuiPageResponse *response = new WebuiPageResponse();
     webuiPage = response;
-    webuiPageBusy = 1;
-    request->onDisconnect([]() {
-        webuiPage = nullptr;
-        webuiPageBusy = 0;
+    request->onDisconnect([response]() {
+        if (webuiPage == response) {
+            webuiPage = nullptr;
+        }
     });
     webLog(request, "page");
     request->send(response);
