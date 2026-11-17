@@ -36,13 +36,22 @@ The scaler then builds its own raster. On this board that raster is 1280×960 at
 
 ### Sync slicer
 
-Composite sync is a voltage, not a logic bit. The sync tip swings toward ground. The rest of the line sits higher. The slicer is a comparator in the ADC. Its output is the digital edge the sync processor times from.
+Composite sync is a voltage on one pin. The sync tip swings toward ground. The rest of the line sits higher. The slicer is a comparator in the ADC (`ADC_SOGEN` on, `ADC_SOGCTRL` as the threshold). Its output is the digital edge the sync processor times from. The ESP8266 only writes that threshold over I2C. The comparator itself is inside the TV5725.
 
-`ADC_SOGCTRL` is the threshold, 5 bits. The firmware comment records about 10 mV per step, from about 10 mV to about 320 mV. Level 6 is about 60 mV, the setting it calls a standard cable. This board holds level 13, about 130 mV, on a 15 kHz arcade source. A higher level waits for a deeper tip. A lower level trips on a shallower tip, and also on noise.
+`ADC_SOGCTRL` is 5 bits, about 10 mV per step, from about 10 mV to about 320 mV. Level 6 is about 60 mV, the setting the chip comment calls a standard cable. A higher level waits for a deeper tip. A lower level trips on a shallower tip, and also on noise.
 
-The sync processor then measures that edge: line count, pulse width, and whether horizontal sync is present. Coast tells it to keep counting through a missing pulse. Clamp uses the back porch to put black at a known ADC code.
+Detection of a new CSYNC source runs like this:
 
-`optimizeSogLevel()` starts at 13 and steps down only while horizontal sync is absent. It stops at the first level that holds the edge. A Namco C137, which is that board’s NTSC sync generator, still draws a full frame while the pulse width glitches. The same thing happens on a board that XORs horizontal and vertical sync onto one pin. Stepping the threshold down on every glitch walks it off the real pulse in about a minute, and the picture drops. With **Ignore VSync** on, a frame that is still about 250 to 280 lines, or 300 to 330 lines for PAL, and that still has horizontal sync, keeps the current slicer level.
+1. The search starts at level 13, about 130 mV. Component YPbPr starts at 14. `optimizeSogLevel()` writes that level, then watches horizontal sync (`HSACT`).
+2. While horizontal sync is absent, it steps the level down by one and looks again. It stops at the first level that holds the edge. That level is the detection result for this source. A tip that already crosses 130 mV stays at 13. This arcade source did.
+3. The sync processor times the falling edge: line count, pulse width, and whether horizontal sync is still present. On XOR composite sync the vertical pin stays quiet. A locked 15 kHz picture is mode 14, about 262 lines for NTSC, with a sync pulse about 4.7 µs wide.
+4. Clamp uses the back porch after that edge to put black at a known ADC code.
+
+A Namco C137, and any board that XORs horizontal and vertical onto one pin, still draws that frame while the pulse width glitches. The tip is deep enough. The width is wrong for a moment: a runt, or a pulse that lasts almost the whole line. The chip flags that as a bad sync-on-green sample.
+
+Without **Ignore VSync**, seventeen of those flags inside a 3 second window lower the slicer by one step. The search was written for a tip that never crosses the line. On a glitchy width it walks the threshold up the waveform. In about 30 to 60 seconds the real tip is no longer the only edge, and the picture drops. Two hundred bad samples in a row also reset mode detect and the picture blanks.
+
+**Ignore VSync** is on by default, and it is the coast for this case. While horizontal sync is present and the line count is still about 250 to 280, or 300 to 330 for PAL, a bad sample does not lower the slicer and does not reset mode detect. The level detection found is the level that stays. A real disconnect is different: horizontal sync is gone, or the line count leaves that range. Then the old reset path runs, and the next source is searched from level 13 again.
 
 ### Sync slicer voltage
 
@@ -64,7 +73,7 @@ The output raster has its own clock. An Si5351 breakout drives TV5725 pin 40 and
 
 The open access point is `gbscontrol`, with no password. From the phone, open `http://192.168.4.1`.
 
-On the home network the board sends the DHCP name `gbscontrol`. Open `http://gbscontrol.local` or `http://192.168.254.158` when the router has given it that address.
+On a home network the board joins as `gbscontrol` and the router assigns the address. Open `http://gbscontrol.local` or that address. The serial log prints it as `STA mode connected; IP:`.
 
 ## Picture
 
@@ -75,7 +84,7 @@ On the home network the board sends the DHCP name `gbscontrol`. Open `http://gbs
 - **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
 - **Scanlines** turns the line overlay on or off.
-- **Ignore VSync** is for boards that XOR horizontal and vertical sync onto the CSync pin. Those pulses flip during the vertical interval and there is no long vertical pulse, so the scaler locks from horizontal sync instead. Turn it off for a source with separate H and V.
+- **Ignore VSync** is the CSYNC coast described under Sync slicer. XOR composite sync has no long vertical pulse, and the pulse width glitches while the frame is still drawing. With this on, that glitch does not move the slicer. Turn it off for a source with separate H and V.
 - **Save picture** stores the size, position, and contrast in one slot. That slot loads again at startup.
 
 The TV5725 factory OSD icons appear on the video for a couple of seconds at lock, and again when you tap gain, contrast, move, size, or scanlines. Those icons are hardwired in the chip. Custom text or a custom logo cannot be uploaded.
