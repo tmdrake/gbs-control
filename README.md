@@ -10,7 +10,7 @@ The board in use is a GBS-8200 v4. The first source is a Primal Rage arcade boar
 
 Two changes on the scaler, and nothing else.
 
-Red, green, and blue each pass through a series resistor. The ohms were not written down. The arcade video is about 5 V, and it arrives at the scaler at about 1 V. CSYNC is the only termination: about 100 ohm from that pin to ground. That 100 ohm figure is remembered, not measured. A video termination is often 75 ohm.
+Red, green, and blue each pass through a series resistor. The ohms were not written down. The arcade video is about 5 V, and it arrives at the scaler at about 1 V. CSYNC may have a series resistor of the same kind. That was not written down either. It shrinks the sync tip the same way those resistors shrink the picture. CSYNC is also terminated: about 100 ohm from the scaler side of that wire to ground. That 100 ohm figure is remembered, not measured. A video termination is often 75 ohm.
 
 ![Video input](images/input-termination.svg)
 
@@ -43,7 +43,7 @@ Composite sync is a voltage on one pin. The sync tip swings toward ground. The r
 Detection of a new CSYNC source runs like this:
 
 1. The search starts at level 13, about 130 mV. Component YPbPr starts at 14. `optimizeSogLevel()` writes that level, then watches horizontal sync (`HSACT`).
-2. While horizontal sync is absent, it steps the level down by one and looks again. It stops at the first level that holds the edge. That level is the detection result for this source. A tip that already crosses 130 mV stays at 13. This arcade source did.
+2. While horizontal sync is absent, it steps the level down by one and looks again. It stops at the first level that holds the edge. That level is the detection result for this source. A tip that already crosses 130 mV stays at 13. This arcade source did. A series resistor on CSYNC can leave a smaller tip, so 130 mV is too high and the comparator has to come down before the edge appears. That step-down is the adjustment for the reduced voltage.
 3. The sync processor times the falling edge: line count, pulse width, and whether horizontal sync is still present. On XOR composite sync the vertical pin stays quiet. A locked 15 kHz picture is mode 14, about 262 lines for NTSC, with a sync pulse about 4.7 µs wide.
 4. Clamp uses the back porch after that edge to put black at a known ADC code.
 
@@ -59,7 +59,7 @@ Without **Ignore VSync**, seventeen of those flags inside a 3 second window lowe
 
 The drawing is the voltage on the CSYNC pin for one line. The dashed line is the slicer. The tip has to fall through it once. That falling edge is the edge the sync processor counts.
 
-A lower level moves the dashed line up, toward the rest of the waveform. A short glitch and ordinary noise then look like extra sync edges, and the composite-sync lock falls apart. That walk is what **Ignore VSync** stops on a frame that is still there.
+A lower level moves the dashed line up, toward the rest of the waveform. Used once, during detection, that is how a smaller tip from a series resistor still makes one falling edge. Left to keep moving on a width glitch, a short spike and ordinary noise become extra sync edges, and the composite-sync lock falls apart. That walk is what **Ignore VSync** stops on a frame that is still there.
 
 The level is not written into the picture slot or `preferencesv2.txt`. Unplugging the game drops horizontal sync, and the next source is searched from level 13 again. A lower voltage found on this game does not become the voltage for another game.
 
