@@ -201,8 +201,15 @@ struct runTimeOptions *rto = &rtos;
 struct userOptions uopts;
 struct userOptions *uopt = &uopts;
 
+static void faultLog(const char *msg);
+
 static void flashOsdIcon(OSDIcon icon)
 {
+    static bool osdTriedLogged = false;
+    if (!osdTriedLogged) {
+        osdTriedLogged = true;
+        faultLog("osd icon requested");
+    }
     osdManager.preset = uopt->presetPreference;
     osdManager.showIcon(icon);
 }
@@ -7001,6 +7008,15 @@ void runSyncWatcher()
                     if (!rto->scanlinesEnabled && !rto->motionAdaptiveDeinterlaceActive) {
                         if (GBS::IF_LD_RAM_BYPS::read() == 0) { // line doubler on?
                             enableScanlines();
+                        } else {
+                            static bool scanSkipLogged = false;
+                            if (!scanSkipLogged) {
+                                scanSkipLogged = true;
+                                char msg[64];
+                                snprintf(msg, sizeof(msg), "scan skipped vt=%u line doubler bypassed",
+                                         (unsigned)GBS::STATUS_SYNC_PROC_VTOTAL::read());
+                                faultLog(msg);
+                            }
                         }
                     } else if (!uopt->wantScanlines && rto->scanlinesEnabled) {
                         disableScanlines();
@@ -7164,6 +7180,64 @@ void calibrateAdcOffset()
     GBS::ADC_BOFCTRL::write(adco->b_off);
 
     //Serial.println(millis() - overallTimer);
+}
+
+static const char FAULT_LOG_PATH[] = "/faults.txt";
+static const size_t FAULT_LOG_MAX = 1536;
+
+static void faultLogTrim()
+{
+    File in = SPIFFS.open(FAULT_LOG_PATH, "r");
+    if (!in) {
+        return;
+    }
+    if (in.size() <= FAULT_LOG_MAX) {
+        in.close();
+        return;
+    }
+    in.seek(in.size() - 768, SeekSet);
+    while (in.available() && in.read() != '\n') {
+    }
+    String tail = in.readString();
+    in.close();
+    File out = SPIFFS.open(FAULT_LOG_PATH, "w");
+    if (!out) {
+        return;
+    }
+    out.print(tail);
+    out.close();
+}
+
+static void faultLog(const char *msg)
+{
+    if (msg == nullptr || msg[0] == '\0') {
+        return;
+    }
+    Serial.printf("fault: %s\n", msg);
+    faultLogTrim();
+    File out = SPIFFS.open(FAULT_LOG_PATH, "a");
+    if (!out) {
+        return;
+    }
+    out.printf("%lu %s\n", millis(), msg);
+    out.close();
+}
+
+static void faultLogDump()
+{
+    File in = SPIFFS.open(FAULT_LOG_PATH, "r");
+    Serial.println(F("--- fault log ---"));
+    if (!in) {
+        Serial.println(F("(empty)"));
+        Serial.println(F("--- end ---"));
+        return;
+    }
+    while (in.available()) {
+        Serial.write(in.read());
+    }
+    in.close();
+    Serial.println();
+    Serial.println(F("--- end ---"));
 }
 
 void loadDefaultUserOptions()
@@ -7412,6 +7486,9 @@ void setup()
     if (!SPIFFS.begin()) {
         SerialM.println(F("SPIFFS mount failed! ((1M SPIFFS) selected?)"));
     } else {
+        char bootFault[80];
+        snprintf(bootFault, sizeof(bootFault), "boot %s", ESP.getResetReason().c_str());
+        faultLog(bootFault);
         // load user preferences file
         File f = SPIFFS.open("/preferencesv2.txt", "r");
         if (!f) {
@@ -8266,6 +8343,10 @@ void loop()
                 SerialM.println(F("OTA Updates on"));
                 initUpdateOTA();
                 rto->allowUpdatesOTA = true;
+                break;
+            case 'H':
+                // USB serial only. SerialM would also push this onto the page socket.
+                faultLogDump();
                 break;
             case 'G':
                 SerialM.print(F("Debug Pings "));
