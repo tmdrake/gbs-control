@@ -10304,6 +10304,41 @@ void startWebserver()
         request->send(200, "application/json", result ? "true" : "false");
     });
 
+    // Name only. The register file and the startup slot stay as they are,
+    // so a rename still comes back in a backup.
+    server.on("/slot/rename", HTTP_GET, [](AsyncWebServerRequest *request) {
+        bool result = false;
+        if (ESP.getFreeHeap() > 8000 && request->params() >= 2) {
+            String slotIndexString = request->getParam((size_t)0)->value();
+            String slotName = request->getParam((size_t)1)->value();
+            uint8_t slotIndex = lowByte(slotIndexString.toInt());
+            slotName.trim();
+            slotName.replace("\r", "");
+            slotName.replace("\n", "");
+            if (slotName.length() > 24) {
+                slotName = slotName.substring(0, 24);
+            }
+            if (slotIndex < SLOTS_TOTAL && slotName.length() > 0 && slotName != "Empty") {
+                SlotMetaArray slotsObject;
+                File slotsBinaryFileRead = SPIFFS.open(SLOTS_FILE, "r");
+                if (slotsBinaryFileRead) {
+                    slotsBinaryFileRead.read((byte *)&slotsObject, sizeof(slotsObject));
+                    slotsBinaryFileRead.close();
+                    char blankName[25] = "                        ";
+                    strncpy(slotsObject.slot[slotIndex].name, blankName, 25);
+                    slotName.toCharArray(slotsObject.slot[slotIndex].name, sizeof(slotsObject.slot[slotIndex].name));
+                    File slotsBinaryOutputFile = SPIFFS.open(SLOTS_FILE, "w");
+                    if (slotsBinaryOutputFile) {
+                        slotsBinaryOutputFile.write((byte *)&slotsObject, sizeof(slotsObject));
+                        slotsBinaryOutputFile.close();
+                        result = true;
+                    }
+                }
+            }
+        }
+        request->send(200, "application/json", result ? "true" : "false");
+    });
+
     server.on("/slot/remove", HTTP_GET, [](AsyncWebServerRequest *request) {
         bool result = false;
         int params = request->params();

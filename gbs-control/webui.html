@@ -237,6 +237,29 @@ body {
   white-space: pre;
 }
 
+.gbs-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.gbs-profile__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gbs-profile .gbs-button__slot {
+  margin: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.gbs-profile .gbs-button__slot[data-chosen] {
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
 .gbs-button__resolution {
   flex-grow: 1;
   font-size: 14px;
@@ -909,7 +932,7 @@ section[name="alert"] {
             <!-- prettier-ignore -->
             <ul class="gbs-help">
               <li>Darker / brighter change the analog input gain. Auto Gain chases white, then turns off when you set gain by hand.</li>
-              <li>Contrast stretches black to white on the scaled picture. Save picture stores it with the preset.</li>
+              <li>Contrast stretches black to white on the scaled picture. A profile stores it with the picture.</li>
             </ul>
             <div class="gbs-flex gbs-margin__bottom--16">
               <button
@@ -1391,11 +1414,30 @@ section[name="alert"] {
             <button
               class="gbs-button gbs-button__control-action"
               type="button"
-              onclick="savePicture()"
+              id="profile-toggle"
             >
               <div class="gbs-icon">Save</div>
-              <div>Save picture</div>
+              <div>Profile</div>
             </button>
+          </div>
+          <div class="gbs-profile" id="profile-panel">
+            <p class="gbs-hint">Save stores this picture in the chosen profile. Recall loads it now. The startup row loads again after a restart. Backup on System includes these profiles.</p>
+            <div class="gbs-profile__list" id="profile-list"></div>
+            <div class="gbs-flex">
+              <button type="button" class="gbs-button gbs-button__control" id="profile-save">
+                <div class="gbs-icon">Save</div>
+                <div>Save</div>
+              </button>
+              <button type="button" class="gbs-button gbs-button__control gbs-button__secondary" id="profile-recall">
+                <div class="gbs-icon">Run</div>
+                <div>Recall</div>
+              </button>
+              <button type="button" class="gbs-button gbs-button__control gbs-button__secondary" id="profile-rename">
+                <div class="gbs-icon">Keys</div>
+                <div>Rename</div>
+              </button>
+            </div>
+            <p class="gbs-hint" id="profile-status"></p>
           </div>
           <p class="gbs-hint">Some boards XOR horizontal and vertical sync onto the CSync pin. The pulses flip during the vertical interval and there is no long vertical pulse, which confuses the CSync input. Ignore VSync locks from horizontal sync instead. Turn it off for a source with separate H and V.</p>
         </section>
@@ -2142,8 +2184,8 @@ section[name="alert"] {
             </legend>
             <!-- prettier-ignore -->
             <ul class="gbs-help">
-              <li>Backup downloads gbs-control.cfg. Restore reads that same file.</li>
-              <li>The file holds this board's saved preferences and picture presets.</li>
+              <li>Backup downloads gbs-control.cfg. Restore writes that file back and restarts.</li>
+              <li>The file holds preferences, profile names, and each saved picture. Startup still loads the last profile after a restore.</li>
             </ul>
             <div class="gbs-flex">
               <button
@@ -2160,13 +2202,15 @@ section[name="alert"] {
                 <div gbs-progress gbs-progress-restore>Restore</div>
               </button>
             </div>
+            <p class="gbs-hint">Backup includes the profiles. Restore writes them back and restarts. Startup loads the last profile.</p>
           </fieldset>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend">
               <div class="gbs-icon">WiFi</div>
               <div>Wi-Fi</div>
             </legend>
-            <p class="gbs-hint">gbscontrol is open, with no password. A phone should open this page on its own. Station joins the scaler to a home network.</p>
+            <p class="gbs-hint">Access point gbscontrol has no Wi-Fi password. Open http://192.168.4.1 yourself. The phone sign-in sheet is not this page.</p>
+            <p class="gbs-hint">The page password is qqqqqqqq. Any username is fine. Station joins a home network and the board restarts. Then open http://gbscontrol.local. The address can change after a restart.</p>
 
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" gbs-wifi-ap>
@@ -2389,6 +2433,7 @@ const GBSControl = {
     dataQueued: 0,
     isWsActive: false,
     maxSlots: 72,
+    profile: { selected: "A", startup: "", userPicked: false },
     queuedText: "",
     scanSSIDDone: false,
     serverIP: "",
@@ -2527,6 +2572,7 @@ const createWebSocket = () => {
             if (activeSlotButton) {
                 GBSControl.ui.slotButtonList.forEach(toggleButtonActive(slotId));
             }
+            noteStartupSlot(messageDataAt2);
             if (messageDataAt3 && messageDataAt4 && messageDataAt5) {
                 const optionByte0 = messageDataAt3.charCodeAt(0);
                 const optionByte1 = messageDataAt4.charCodeAt(0);
@@ -2706,44 +2752,193 @@ const loadUser = (link) => {
     }
     return fetch(`http://${GBSControl.serverIP}/uc?${link}&nocache=${new Date().getTime()}`);
 };
-/** SLOT management */
-const savePicture = () => {
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~()!*:,";
-    const slot = "1";
-    const index = alphabet.indexOf(slot);
-    let saved = false;
-    fetch(`/slot/set?slot=${slot}&${Date.now()}`)
-        .then((response) => {
-        if (!response.ok) {
-            throw new Error("set");
+/** Profiles. Six stable slots, plus the startup slot if an older save used another one. */
+const PROFILE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~()!*:,";
+const PROFILE_CHARS = ["A", "B", "C", "D", "E", "F"];
+const profileIndex = (chr) => PROFILE_ALPHABET.indexOf(chr);
+const profileMeta = (chr) => {
+    const slots = GBSControl.structs && GBSControl.structs.slots;
+    const index = profileIndex(chr);
+    if (!slots || index < 0) {
+        return null;
+    }
+    return slots[index] || null;
+};
+const profileStoredName = (chr) => {
+    const meta = profileMeta(chr);
+    const raw = meta && meta.name ? String(meta.name).trim() : "";
+    if (!raw || raw === "Empty") {
+        return "";
+    }
+    return raw;
+};
+const profileLabel = (chr) => profileStoredName(chr) || ("Profile " + chr);
+const profileChars = () => {
+    const chars = PROFILE_CHARS.slice();
+    const startup = GBSControl.profile.startup;
+    if (startup && chars.indexOf(startup) < 0 && profileIndex(startup) >= 0) {
+        chars.push(startup);
+    }
+    return chars;
+};
+const profileEscape = (value) => String(value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+}[ch]));
+const setProfileStatus = (text) => {
+    const el = document.getElementById("profile-status");
+    if (el) {
+        el.textContent = text;
+    }
+};
+const renderProfiles = () => {
+    const list = document.getElementById("profile-list");
+    if (!list) {
+        return;
+    }
+    const startup = GBSControl.profile.startup;
+    const selected = GBSControl.profile.selected || "A";
+    list.innerHTML = profileChars().map((chr) => {
+        const chosen = chr === selected ? " data-chosen" : "";
+        const meta = chr === startup ? "startup" : ("profile " + chr);
+        return `<button type="button" class="gbs-button gbs-button__slot" gbs-role="slot" gbs-element-ref="slot-${chr}" gbs-profile="${chr}" gbs-name="${profileEscape(profileLabel(chr))}" gbs-meta="${meta}"${chosen}></button>`;
+    }).join("");
+    list.querySelectorAll("[gbs-profile]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            GBSControl.profile.selected = btn.getAttribute("gbs-profile");
+            GBSControl.profile.userPicked = true;
+            renderProfiles();
+        });
+    });
+    if (GBSControl.ui) {
+        GBSControl.ui.slotButtonList = nodelistToArray(document.querySelectorAll('[gbs-role="slot"]'));
+    }
+};
+const noteStartupSlot = (chr) => {
+    if (!chr || chr === GBSControl.profile.startup) {
+        return;
+    }
+    const listed = document.querySelector(`[gbs-profile="${chr}"]`);
+    GBSControl.profile.startup = chr;
+    if (!GBSControl.profile.userPicked) {
+        GBSControl.profile.selected = chr;
+    }
+    if (!listed && profileIndex(chr) >= 0) {
+        renderProfiles();
+        return;
+    }
+    document.querySelectorAll("[gbs-profile]").forEach((btn) => {
+        const id = btn.getAttribute("gbs-profile");
+        btn.setAttribute("gbs-meta", id === chr ? "startup" : ("profile " + id));
+        if (id === GBSControl.profile.selected) {
+            btn.setAttribute("data-chosen", "");
         }
-        return response.text();
-    })
+        else {
+            btn.removeAttribute("data-chosen");
+        }
+    });
+};
+const profileReadOk = (response) => {
+    if (!response.ok) {
+        throw new Error("http");
+    }
+    return response.text();
+};
+const profileSave = () => {
+    const chr = GBSControl.profile.selected || "A";
+    const index = profileIndex(chr);
+    const name = profileLabel(chr).substring(0, 24);
+    if (index < 0) {
+        setProfileStatus("Could not save this profile.");
+        return;
+    }
+    setProfileStatus("Saving " + name + "…");
+    fetch(`/slot/set?slot=${encodeURIComponent(chr)}&${Date.now()}`)
+        .then(profileReadOk)
         .then((body) => {
         if (body !== "true") {
             throw new Error("set");
         }
-        return fetch(`/slot/save?index=${index}&name=Picture&${Date.now()}`);
+        return fetch(`/slot/save?index=${index}&name=${encodeURIComponent(name)}&${Date.now()}`);
     })
-        .then((response) => {
-        if (!response.ok) {
-            throw new Error("meta");
-        }
-        return response.text();
-    })
+        .then(profileReadOk)
         .then((body) => {
         if (body !== "true") {
             throw new Error("meta");
         }
         return loadUser("4");
     })
+        .then(() => new Promise((resolve) => setTimeout(resolve, 600)))
+        .then(() => fetchSlotNames())
         .then(() => {
-        saved = true;
-        return gbsAlert("Picture saved. It will load again after a restart.");
+        GBSControl.profile.startup = chr;
+        GBSControl.profile.selected = chr;
+        renderProfiles();
+        setProfileStatus("Saved " + name + ". Startup will load this profile.");
     })
         .catch(() => {
-        if (!saved) {
-            gbsAlert("Could not save the picture.");
+        setProfileStatus("Could not save this profile.");
+    });
+};
+const profileRecall = () => {
+    const chr = GBSControl.profile.selected || "A";
+    if (!profileStoredName(chr)) {
+        setProfileStatus("Save this profile before recalling it.");
+        return;
+    }
+    const name = profileLabel(chr);
+    setProfileStatus("Recalling " + name + "…");
+    fetch(`/slot/set?slot=${encodeURIComponent(chr)}&${Date.now()}`)
+        .then(profileReadOk)
+        .then((body) => {
+        if (body !== "true") {
+            throw new Error("set");
+        }
+        return loadUser("3");
+    })
+        .then(() => fetch(`/gbs/restore-filters?${Date.now()}`))
+        .then(() => {
+        GBSControl.profile.startup = chr;
+        renderProfiles();
+        setProfileStatus("Recalled " + name + ". Startup will load this profile.");
+    })
+        .catch(() => {
+        setProfileStatus("Could not recall this profile.");
+    });
+};
+const profileRename = () => {
+    const chr = GBSControl.profile.selected || "A";
+    const index = profileIndex(chr);
+    if (index < 0) {
+        return;
+    }
+    gbsPrompt("Profile name", profileLabel(chr))
+        .then((value) => {
+        const name = String(value || "").trim().substring(0, 24);
+        if (!name || name === "Empty") {
+            setProfileStatus("Keep a name on the profile.");
+            return;
+        }
+        setProfileStatus("Renaming…");
+        return fetch(`/slot/rename?index=${index}&name=${encodeURIComponent(name)}&${Date.now()}`)
+            .then(profileReadOk)
+            .then((body) => {
+            if (body !== "true") {
+                throw new Error("rename");
+            }
+            return fetchSlotNames();
+        })
+            .then(() => {
+            renderProfiles();
+            setProfileStatus("Renamed to " + name + ".");
+        });
+    })
+        .catch((err) => {
+        if (err) {
+            setProfileStatus("Could not rename this profile.");
         }
     });
 };
@@ -2878,6 +3073,7 @@ const openControls = () => {
         GBSControl.structs.slots.length === GBSControl.maxSlots) {
         updateSlotNames();
     }
+    renderProfiles();
     createWebSocket();
     createIntervalChecks();
     setTimeout(hideLoading, 400);
@@ -3403,6 +3599,30 @@ const initGeneralListeners = () => {
         GBSControl.ui.backupInput.value = "";
     });
     GBSControl.ui.backupButton.addEventListener("click", doBackup);
+    const profileToggle = document.getElementById("profile-toggle");
+    const profilePanel = document.getElementById("profile-panel");
+    if (profileToggle && profilePanel) {
+        profileToggle.addEventListener("click", () => {
+            if (profilePanel.hasAttribute("hidden")) {
+                profilePanel.removeAttribute("hidden");
+            }
+            else {
+                profilePanel.setAttribute("hidden", "");
+            }
+        });
+    }
+    const profileSaveButton = document.getElementById("profile-save");
+    const profileRecallButton = document.getElementById("profile-recall");
+    const profileRenameButton = document.getElementById("profile-rename");
+    if (profileSaveButton) {
+        profileSaveButton.addEventListener("click", profileSave);
+    }
+    if (profileRecallButton) {
+        profileRecallButton.addEventListener("click", profileRecall);
+    }
+    if (profileRenameButton) {
+        profileRenameButton.addEventListener("click", profileRename);
+    }
     GBSControl.ui.wifiListTable.addEventListener("click", wifiSelectSSID);
     GBSControl.ui.wifiConnectButton.addEventListener("click", wifiConnect);
     GBSControl.ui.wifiApButton.addEventListener("click", wifiSetAPMode);

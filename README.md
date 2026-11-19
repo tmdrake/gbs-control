@@ -134,7 +134,7 @@ The on-screen display is not a menu that stays up. It is a short icon on the vid
 
 Output horizontal sync is the GBS raster, not the game’s sync. With Frame Lock off, it stays on the 1280×960 clock. With Frame Lock on, the Si5351 is trimmed to this frame, about 64 Hz for 243 lines instead of 60 Hz, and some displays lose horizontal lock. If the width or the horizontal lock looks wrong, turn Frame Lock off first. Position and width are the Picture arrows after that.
 
-The picture controls use arrow marks. Picture and System are the only names on those menu buttons.
+The picture controls use arrow marks. Picture and System are the only names on those menu buttons. Profile sits under those controls. Save, Recall, and Rename use six named profiles, and startup loads the last one. Backup and restore carry the profiles in `gbs-control.cfg`.
 
 To read a fault after the fact, connect USB at 115200 and send `H`. The log is also in `/faults.txt` on the chip. A boot line is the reset reason. `scan skipped` means scanlines were saved and the line doubler was bypassed.
 
@@ -148,7 +148,7 @@ To read a fault after the fact, connect USB at 115200 and send `H`. The log is a
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
 - **Scanlines** turns the line overlay on or off. The choice is saved. It draws on a 15 kHz source, under 380 lines. Pandora 640×480 is about 525 lines, the doubler is bypassed, and the lines do not draw. See Scanlines and the on-screen display.
 - **Ignore VSync** is the CSYNC coast described under Sync slicer. XOR composite sync has no long vertical pulse, and the pulse width glitches while the frame is still drawing. With this on, that glitch does not move the slicer. Turn it off for a source with separate H and V.
-- **Save picture** stores the size, position, and contrast in one slot. That slot loads again at startup.
+- **Profile** stores the current picture under a name. Six profiles are listed, A through F. **Save** writes the chosen one and makes it the startup profile. **Recall** loads it now. **Rename** changes the name and leaves the saved picture in place. Startup loads that same profile again. An older save that used another slot still appears in the list.
 
 The TV5725 factory OSD icons appear on the video for a couple of seconds at lock, and again when you tap gain, contrast, move, size, or scanlines. Those icons are hardwired in the chip. Custom text or a custom logo cannot be uploaded.
 
@@ -156,7 +156,7 @@ The TV5725 factory OSD icons appear on the video for a couple of seconds at lock
 
 ![System page](images/wifi-page.png)
 
-**Incoming signal** sits at the top of this tab and refreshes every second: lock, detected mode, line count, H/V sync, and Frame Time Lock. **Restart** and **Reset Defaults** are below that. **Backup** downloads `gbs-control.cfg`. **Restore** reads that file back and restarts the scaler. **Station** joins a home network. The over-the-air update button is not on the page.
+**Incoming signal** sits at the top of this tab and refreshes every second: lock, detected mode, line count, H/V sync, and Frame Time Lock. **Restart** and **Reset Defaults** are below that. **Backup** downloads `gbs-control.cfg`. **Restore** writes that file back and restarts. The file holds preferences, the profile names, and each saved picture, so the last profile still loads at startup. **Station** joins a home network and the board restarts. On the access point, open `http://192.168.4.1`. After it joins, open `http://gbscontrol.local`. The page password is `qqqqqqqq` and the username is ignored. The phone sign-in sheet is not this page. The over-the-air update button is not on the page.
 
 The notes below are the 1.4.0 package this project started from.
 
