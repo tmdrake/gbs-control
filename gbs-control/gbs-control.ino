@@ -9734,7 +9734,7 @@ public:
         addHeader("Content-Encoding", "gzip");
         // The browser was downloading this 250 kB file on every open. Keep it
         // so a reload is a short check instead of another full copy.
-        addHeader("Cache-Control", "public, max-age=86400");
+        addHeader("Cache-Control", "public, max-age=300, must-revalidate");
         char etag[16];
         snprintf(etag, sizeof(etag), "\"%u\"", (unsigned)webui_html_len);
         addHeader("ETag", etag);
@@ -9867,6 +9867,54 @@ void webuiPumpPage()
     webuiPage->pump();
 }
 
+static int webuiDecodeBasic(const char *in, char *out, int outLen)
+{
+    static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    int val = 0;
+    int valb = -8;
+    int n = 0;
+    for (const char *p = in; *p && *p != '='; p++) {
+        const char *hit = strchr(table, *p);
+        if (hit == nullptr) {
+            continue;
+        }
+        val = (val << 6) + (int)(hit - table);
+        valb += 6;
+        if (valb >= 0) {
+            if (n >= outLen - 1) {
+                break;
+            }
+            out[n++] = (char)((val >> valb) & 0xFF);
+            valb -= 8;
+        }
+    }
+    out[n] = '\0';
+    return n;
+}
+
+static bool webuiPasswordOk(AsyncWebServerRequest *request)
+{
+    if (!request->hasHeader(F("Authorization"))) {
+        return false;
+    }
+    String value = request->header(F("Authorization"));
+    if (!value.startsWith(F("Basic "))) {
+        return false;
+    }
+    value = value.substring(6);
+    value.trim();
+    char decoded[80];
+    if (webuiDecodeBasic(value.c_str(), decoded, sizeof(decoded)) <= 0) {
+        return false;
+    }
+    // The name before the colon is ignored. Any name with this password is enough.
+    char *colon = strchr(decoded, ':');
+    if (colon == nullptr) {
+        return false;
+    }
+    return strcmp(colon + 1, "qqqqqqqq") == 0;
+}
+
 static bool webuiPageCached(AsyncWebServerRequest *request)
 {
     if (!request->hasHeader(F("If-None-Match"))) {
@@ -9879,6 +9927,14 @@ static bool webuiPageCached(AsyncWebServerRequest *request)
 
 static void sendWebuiPage(AsyncWebServerRequest *request)
 {
+    // The house router was opening this page and pulling the whole file.
+    // A password prompt keeps that probe to a few dozen bytes. The browser
+    // asks once and remembers it for this host.
+    if (!webuiPasswordOk(request)) {
+        webLog(request, "401");
+        request->requestAuthentication(AUTH_BASIC, "gbscontrol");
+        return;
+    }
     if (webuiPageCached(request)) {
         webLog(request, "304");
         AsyncWebServerResponse *cached = request->beginResponse(304);
@@ -9886,7 +9942,7 @@ static void sendWebuiPage(AsyncWebServerRequest *request)
             request->send(304);
             return;
         }
-        cached->addHeader("Cache-Control", "public, max-age=86400");
+        cached->addHeader("Cache-Control", "public, max-age=300, must-revalidate");
         char etag[16];
         snprintf(etag, sizeof(etag), "\"%u\"", (unsigned)webui_html_len);
         cached->addHeader("ETag", etag);
