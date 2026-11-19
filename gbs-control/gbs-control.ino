@@ -6496,8 +6496,11 @@ void runSyncWatcher()
                                     GBS::GBS_RUNTIME_FTL_ADJUSTED::write(1);
                                     delay(10);
                                     lastVsyncLock = millis();
+                                    // Only move the output clock while Frame Lock is on.
+                                    // A 243-line source is not 60 Hz, and matching it
+                                    // makes the display's horizontal sync wander.
+                                    externalClockGenSyncInOutRate();
                                 }
-                                externalClockGenSyncInOutRate();
                             }
                         }
                         /*else {
@@ -6632,8 +6635,11 @@ void runSyncWatcher()
                                 GBS::PLL648_CONTROL_01::write(0x75);
                             }
                         }
-                        // sync clocks now
-                        externalClockGenSyncInOutRate();
+                        // Match the output clock to the source only when Frame Lock
+                        // is on. Otherwise keep the preset's fixed horizontal rate.
+                        if (uopt->enableFrameTimeLock) {
+                            externalClockGenSyncInOutRate();
+                        }
                     }
 
                     // note: this is all duplicated below. unify!
@@ -6745,8 +6751,9 @@ void runSyncWatcher()
                                     GBS::PLL648_CONTROL_01::write(0x75);
                                 }
                             }
-                            // sync clocks now
-                            externalClockGenSyncInOutRate();
+                            if (uopt->enableFrameTimeLock) {
+                                externalClockGenSyncInOutRate();
+                            }
                         }
 
                         // note: this is all duplicated above. unify!
@@ -9033,8 +9040,9 @@ void loop()
                         GBS::PLL648_CONTROL_01::write(0x75);
                     }
                 }
-                // sync clocks now
-                externalClockGenSyncInOutRate();
+                if (uopt->enableFrameTimeLock) {
+                    externalClockGenSyncInOutRate();
+                }
             }
             rto->applyPresetDoneStage = 0;
         }
@@ -9045,8 +9053,9 @@ void loop()
             GBS::PAD_SYNC_OUT_ENZ::write(0); // enable sync out // 3rd chance
         }
 
-        // sync clocks now
-        externalClockGenSyncInOutRate();
+        if (uopt->enableFrameTimeLock) {
+            externalClockGenSyncInOutRate();
+        }
         rto->applyPresetDoneStage = 0; // timeout
     }
 
