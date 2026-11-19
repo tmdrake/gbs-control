@@ -177,6 +177,10 @@ body {
   margin: 8px 4px 0;
 }
 
+.gbs-hint--warn {
+  color: var(--color-warning);
+}
+
 .gbs-signal {
   display: grid;
   grid-template-columns: 7.5em 1fr;
@@ -278,10 +282,6 @@ body {
 
 .gbs-scanlines .gbs-button__control {
   width: auto;
-}
-
-.gbs-scanlines .gbs-hint {
-  margin: 6px 4px 0;
 }
 
 .gbs-button__resolution {
@@ -1409,6 +1409,7 @@ section[name="alert"] {
           <div class="gbs-flex gbs-scanlines-row gbs-margin__bottom--16">
             <div class="gbs-scanlines">
               <button
+                id="scanlines-button"
                 gbs-message="7"
                 gbs-message-type="user"
                 gbs-click="normal"
@@ -1417,7 +1418,6 @@ section[name="alert"] {
               >
                 <div>Scanlines</div>
               </button>
-              <p class="gbs-hint" id="scanline-note" hidden>Scanlines stay off on this picture.</p>
             </div>
             <button
               class="gbs-button gbs-button__control"
@@ -1427,6 +1427,7 @@ section[name="alert"] {
               <div>Profile</div>
             </button>
           </div>
+          <p class="gbs-hint gbs-hint--warn" id="scanline-note" hidden>Scanlines cannot be drawn at 380 lines or more.</p>
           <div class="gbs-profile" id="profile-panel">
             <p class="gbs-hint">The startup row loads after a restart.</p>
             <div class="gbs-profile__list" id="profile-list"></div>
@@ -2718,14 +2719,19 @@ const updateSignal = () => {
         }
         setSignalText("signal-ftl", ftl, data.frameLock && !data.frameLockReady);
         const scanlineNote = document.getElementById("scanline-note");
-        if (scanlineNote) {
+        const scanlineButton = document.getElementById("scanlines-button");
+        if (scanlineNote && scanlineButton) {
             const lines = Number(data.lines);
             const ntscOrPal = data.mode === "NTSC 240p/480i" || data.mode === "PAL 576i";
             if (data.lock && lines >= 380 && !ntscOrPal) {
+                const kind = lines > 535 ? ", 720p" : "";
+                scanlineNote.textContent = lines + " lines" + kind + ". Scanlines cannot be drawn at 380 or more.";
                 scanlineNote.removeAttribute("hidden");
+                scanlineButton.setAttribute("disabled", "");
             }
             else {
                 scanlineNote.setAttribute("hidden", "");
+                scanlineButton.removeAttribute("disabled");
             }
         }
     })
