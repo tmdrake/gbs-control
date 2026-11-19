@@ -69,6 +69,18 @@ The sample-clock PLL locks to the recovered horizontal sync and decides how many
 
 The output raster has its own clock. An Si5351 breakout drives TV5725 pin 40 and replaces the chip’s PLL648. Frame Lock measures the game frame and trims that Si5351 frequency until the output frame is the same length, so a tear line does not crawl.
 
+## Pandora Box DX
+
+A Pandora Box DX on the JAMMA edge can send three pictures. The manual lists 1280×720, 640×480, and 384×224. 384×224 is the 15 kHz CRT mode. The default is 1280×720. There is no downscaler in that path, so the GBS sees whichever of those three the DX is set to.
+
+Hold the cabinet Service button, turn the cabinet on, and release Service after about 2 seconds. Each power-on steps one resolution: 640×480, then 384×224. The button on the DX board itself does the same job. The Scanning Line item in the DX menu is the Pandora’s own effect. Leave it off when the GBS is drawing scanlines.
+
+A locked 15 kHz picture is about 262 lines, mode 14, with horizontal sync present. About 744 lines is the 720p raster, not a locked game. The coast does not apply there. It only holds while horizontal sync is present and the line count stays about 250 to 280, or 300 to 330 for PAL.
+
+With the DX still on 720p, the page reports no lock. The line count wanders, through the 400s and well above 1000, and horizontal sync stays off. Scanlines are not drawn, because the line doubler is bypassed. The on-screen icons need that same locked picture.
+
+Set the DX to 384×224. The page should then say locked, with the line count near 262. Scanlines turn on from the GBS page. The icons show when brightness, contrast, position, or size changes.
+
 ## Open the page
 
 The open access point is `gbscontrol`, with no Wi-Fi password. From the phone, open `http://192.168.4.1`.
