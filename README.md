@@ -71,9 +71,29 @@ The output raster has its own clock. An Si5351 breakout drives TV5725 pin 40 and
 
 ## Open the page
 
-The open access point is `gbscontrol`, with no password. From the phone, open `http://192.168.4.1`.
+The open access point is `gbscontrol`, with no Wi-Fi password. From the phone, open `http://192.168.4.1`.
 
-On a home network the board joins as `gbscontrol` and the router assigns the address. Open `http://gbscontrol.local` or that address. The serial log prints it as `STA mode connected; IP:`.
+On a home network the board joins as `gbscontrol` and the router assigns the address. Open `http://gbscontrol.local` or that address. The serial log prints it as `STA mode connected; IP:`. After a reset the router can hand out a new address, so the old number stops answering until the name comes back.
+
+The page asks for a password before it sends the file. The username is ignored. The password is `qqqqqqqq`. A router that probes the board has no password, so it gets a short refusal and does not download the page. The browser asks once and remembers it for that host.
+
+The page is about 30 kB gzipped. It used to be about 250 kB, mostly two embedded fonts and a second logo. Those are gone. The menu keeps a 64 pixel dragon. Buttons use short words. The browser is told to recheck the page, so a reload can be a short `304` instead of another full copy. A second request while a copy is already going out does not start another one.
+
+The ESP8266 core’s small TCP stack uses 536-byte segments. A phone stalled part way through the old page on that stack. This build uses the core’s 1460-byte stack, which is the segment size the web library was written for. The finished page connection is closed from the main loop. Closing it inside the Wi-Fi callback reset the chip.
+
+## Fault log
+
+Faults are appended to `/faults.txt` in the chip’s flash. The file stays around 1.5 kB. Each boot records the reset reason. If scanlines are wanted and the line doubler is bypassed, it records `scan skipped` and the line count. The first on-screen icon request is recorded too.
+
+Plug in USB, open the serial port at 115200, and send the letter `H`. The chip prints the stored lines. That print stays on USB.
+
+## Scanlines and the on-screen display
+
+The scanline switch is one saved preference. A picture slot can store its own copy, and that copy is applied when the slot is loaded. Connecting a source does not reload the slot. A timing preset is saved with scanlines turned off on purpose, then the effect is put back only while the line doubler is in the path. A tall source, such as one reporting about 744 lines, bypasses the line doubler, so the saved switch can stay on and the lines are not drawn.
+
+The on-screen display is a factory icon on the video for a couple of seconds. It appears at lock, and again when gain, contrast, move, size, or scanlines is changed. It is not a constant overlay.
+
+The blue light on the ESP8266 is the lock LED. It is on while the scaler reports sync, and off when that sync is declared lost. A short reboot can leave it looking steady, because the picture chip keeps running and the LED comes back on as soon as lock returns.
 
 ## Picture
 
@@ -83,7 +103,7 @@ On a home network the board joins as `gbscontrol` and the router assigns the add
 - **Contrast −** and **contrast +** stretch black to white on the scaled picture (`VDS_Y_GAIN`, step of 8).
 - **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
-- **Scanlines** turns the line overlay on or off.
+- **Scanlines** turns the line overlay on or off. The choice is saved. A source that bypasses the line doubler does not draw them. See Scanlines and the on-screen display.
 - **Ignore VSync** is the CSYNC coast described under Sync slicer. XOR composite sync has no long vertical pulse, and the pulse width glitches while the frame is still drawing. With this on, that glitch does not move the slicer. Turn it off for a source with separate H and V.
 - **Save picture** stores the size, position, and contrast in one slot. That slot loads again at startup.
 
