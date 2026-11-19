@@ -134,7 +134,7 @@ The on-screen display is not a menu that stays up. It is a short icon on the vid
 
 Output horizontal sync is the GBS raster, not the game’s sync. With Frame Lock off, it stays on the 1280×960 clock. With Frame Lock on, the Si5351 is trimmed to this frame, about 64 Hz for 243 lines instead of 60 Hz, and some displays lose horizontal lock. If the width or the horizontal lock looks wrong, turn Frame Lock off first. Position and width are the Picture arrows after that.
 
-The picture controls use arrow marks. Picture and System are the only names on those menu buttons. Profile sits under those controls. Save, Recall, and Rename use six named profiles, and startup loads the last one. Backup and restore carry the profiles in `gbs-control.cfg`.
+The picture controls use arrow marks. Each button has one name. Picture and System are the menu buttons. Move, Size, and Crop choose what the arrows do. Profile sits under those controls. Ignore VSync is at the bottom of Picture, next to its note. Save, Recall, and Rename use six named profiles, and the row marked startup loads again after a restart. Backup and restore carry the profiles in `gbs-control.cfg`.
 
 To read a fault after the fact, connect USB at 115200 and send `H`. The log is also in `/faults.txt` on the chip. A boot line is the reset reason. `scan skipped` means scanlines were saved and the line doubler was bypassed.
 

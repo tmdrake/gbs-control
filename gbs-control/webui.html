@@ -252,8 +252,13 @@ body {
 
 .gbs-profile .gbs-button__slot {
   margin: 0;
+  min-height: 44px;
   text-align: left;
   width: 100%;
+}
+
+.gbs-profile .gbs-button__slot[gbs-meta=""]::after {
+  display: none;
 }
 
 .gbs-profile .gbs-button__slot[data-chosen] {
@@ -285,22 +290,27 @@ body {
 }
 
 .gbs-button__control {
+  display: flex;
+  flex-direction: column;
   flex-grow: 1;
   height: 68px;
+  justify-content: center;
   margin: 2px;
   padding: 6px;
-  text-align: right;
-  vertical-align: top;
+  text-align: center;
   white-space: initial;
   width: 84px;
 }
 
 .gbs-button__control-action {
+  display: flex;
+  flex-direction: column;
   flex-grow: 1;
   height: 56px;
-  line-height: 1;
+  justify-content: center;
+  line-height: 1.1;
   margin: 4px;
-  text-align: right;
+  text-align: center;
 }
 
 /* menu */
@@ -926,7 +936,6 @@ section[name="alert"] {
         <section name="control">
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
-              <div class="gbs-icon">Sun</div>
               <div>Gain and contrast</div>
             </legend>
             <!-- prettier-ignore -->
@@ -960,7 +969,6 @@ section[name="alert"] {
                 gbs-toggle="adcAutoGain"
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
-                <div class="gbs-icon">Auto</div>
                 <div>Auto Gain</div>
               </button>
             </div>
@@ -1029,25 +1037,22 @@ section[name="alert"] {
                 gbs-control-target="move"
                 active
               >
-                <div class="gbs-icon">Nudge</div>
-                <div>move</div>
+                <div>Move</div>
               </button>
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="scale"
               >
-                <div class="gbs-icon">Size</div>
-                <div>size</div>
+                <div>Size</div>
               </button>
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="borders"
               >
-                <div class="gbs-icon">Frame</div>
-                <div>crop</div>
+                <div>Crop</div>
               </button>
             </div>
-            <p class="gbs-hint" gbs-control-hint>Arrows shift the picture. Switch to Size or Crop first if you want those.</p>
+            <p class="gbs-hint" gbs-control-hint>Arrows shift the picture.</p>
           </fieldset>
           <fieldset class="gbs-fieldset gbs-controls__desktop">
             <legend class="gbs-fieldset__legend">
@@ -1081,8 +1086,7 @@ section[name="alert"] {
             </div>
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" active>
-                <div class="gbs-icon">Nudge</div>
-                <div>move</div>
+                <div>Move</div>
               </button>
               <button
                 gbs-message="/"
@@ -1126,8 +1130,7 @@ section[name="alert"] {
 
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" active>
-                <div class="gbs-icon">Size</div>
-                <div>size</div>
+                <div>Size</div>
               </button>
               <button
                 gbs-message="5"
@@ -1174,8 +1177,7 @@ section[name="alert"] {
                 gbs-control-target="borders"
                 active
               >
-                <div class="gbs-icon">Frame</div>
-                <div>crop</div>
+                <div>Crop</div>
               </button>
               <button
                 gbs-message="D"
@@ -1197,8 +1199,7 @@ section[name="alert"] {
             </legend>
             <div class="">
               <button active class="gbs-button direction">
-                <div class="gbs-icon">Nudge</div>
-                <div>move</div>
+                <div>Move</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -1248,8 +1249,7 @@ section[name="alert"] {
             </div>
             <div class="">
               <button class="gbs-button direction" active>
-                <div class="gbs-icon">Size</div>
-                <div>size</div>
+                <div>Size</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -1299,8 +1299,7 @@ section[name="alert"] {
             </div>
             <div class="">
               <button class="gbs-button direction" active>
-                <div class="gbs-icon">Frame</div>
-                <div>crop</div>
+                <div>Crop</div>
               </button>
               <div class="keyboard">
                 <div>
@@ -1351,8 +1350,7 @@ section[name="alert"] {
           </fieldset> -->
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
-              <div class="gbs-icon">Time</div>
-              <div>Frame Time Lock</div>
+              <div>Frame Lock</div>
             </legend>
             <!-- prettier-ignore -->
             <ul class="gbs-help">
@@ -1367,7 +1365,6 @@ section[name="alert"] {
                 gbs-toggle="frameTimeLock"
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
-                <div class="gbs-icon">Time</div>
                 <div>Frame Lock</div>
               </button>
               <button
@@ -1398,9 +1395,33 @@ section[name="alert"] {
               gbs-toggle="scanlines"
               class="gbs-button gbs-button__control gbs-button__secondary"
             >
-              <div class="gbs-icon">Fade</div>
               <div>Scanlines</div>
             </button>
+            <button
+              class="gbs-button gbs-button__control"
+              type="button"
+              id="profile-toggle"
+            >
+              <div>Profile</div>
+            </button>
+          </div>
+          <div class="gbs-profile" id="profile-panel">
+            <p class="gbs-hint">The startup row loads after a restart.</p>
+            <div class="gbs-profile__list" id="profile-list"></div>
+            <div class="gbs-flex">
+              <button type="button" class="gbs-button gbs-button__control" id="profile-save">
+                <div>Save</div>
+              </button>
+              <button type="button" class="gbs-button gbs-button__control gbs-button__secondary" id="profile-recall">
+                <div>Recall</div>
+              </button>
+              <button type="button" class="gbs-button gbs-button__control gbs-button__secondary" id="profile-rename">
+                <div>Rename</div>
+              </button>
+            </div>
+            <p class="gbs-hint" id="profile-status"></p>
+          </div>
+          <div class="gbs-flex">
             <button
               gbs-message="c"
               gbs-message-type="user"
@@ -1408,38 +1429,10 @@ section[name="alert"] {
               gbs-toggle="coastThroughMissingVSync"
               class="gbs-button gbs-button__control gbs-button__secondary"
             >
-              <div class="gbs-icon">Sync</div>
               <div>Ignore VSync</div>
             </button>
-            <button
-              class="gbs-button gbs-button__control-action"
-              type="button"
-              id="profile-toggle"
-            >
-              <div class="gbs-icon">Save</div>
-              <div>Profile</div>
-            </button>
           </div>
-          <div class="gbs-profile" id="profile-panel">
-            <p class="gbs-hint">Save stores this picture in the chosen profile. Recall loads it now. The startup row loads again after a restart. Backup on System includes these profiles.</p>
-            <div class="gbs-profile__list" id="profile-list"></div>
-            <div class="gbs-flex">
-              <button type="button" class="gbs-button gbs-button__control" id="profile-save">
-                <div class="gbs-icon">Save</div>
-                <div>Save</div>
-              </button>
-              <button type="button" class="gbs-button gbs-button__control gbs-button__secondary" id="profile-recall">
-                <div class="gbs-icon">Run</div>
-                <div>Recall</div>
-              </button>
-              <button type="button" class="gbs-button gbs-button__control gbs-button__secondary" id="profile-rename">
-                <div class="gbs-icon">Keys</div>
-                <div>Rename</div>
-              </button>
-            </div>
-            <p class="gbs-hint" id="profile-status"></p>
-          </div>
-          <p class="gbs-hint">Some boards XOR horizontal and vertical sync onto the CSync pin. The pulses flip during the vertical interval and there is no long vertical pulse, which confuses the CSync input. Ignore VSync locks from horizontal sync instead. Turn it off for a source with separate H and V.</p>
+          <p class="gbs-hint">Holds composite sync. Off for separate H and V.</p>
         </section>
 
         <section name="filters" hidden>
@@ -2135,7 +2128,6 @@ section[name="alert"] {
         <section name="system" hidden>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend">
-              <div class="gbs-icon">Graph</div>
               <div>Incoming signal</div>
             </legend>
             <dl class="gbs-signal">
@@ -2152,10 +2144,6 @@ section[name="alert"] {
             </dl>
           </fieldset>
           <fieldset class="gbs-fieldset">
-            <legend class="gbs-fieldset__legend">
-              <div class="gbs-icon">Bolt</div>
-              <div>System</div>
-            </legend>
             <div class="gbs-flex">
               <button
                 gbs-message="a"
@@ -2163,7 +2151,6 @@ section[name="alert"] {
                 gbs-click="normal"
                 class="gbs-button gbs-button__control"
               >
-                <div class="gbs-icon">Undo</div>
                 <div>Restart</div>
               </button>
               <button
@@ -2172,68 +2159,50 @@ section[name="alert"] {
                 gbs-click="normal"
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
-                <div class="gbs-icon">Reset</div>
                 <div>Reset Defaults</div>
               </button>
             </div>
           </fieldset>
           <fieldset class="gbs-fieldset">
-            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
-              <div class="gbs-icon">Card</div>
+            <legend class="gbs-fieldset__legend">
               <div>Config file</div>
             </legend>
-            <!-- prettier-ignore -->
-            <ul class="gbs-help">
-              <li>Backup downloads gbs-control.cfg. Restore writes that file back and restarts.</li>
-              <li>The file holds preferences, profile names, and each saved picture. Startup still loads the last profile after a restore.</li>
-            </ul>
             <div class="gbs-flex">
               <button
                 class="gbs-button gbs-button__control gbs-button__secondary gbs-backup-button"
               >
-                <div class="gbs-icon">Down</div>
                 <div gbs-progress gbs-progress-backup>Backup</div>
               </button>
               <button
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
-                <div class="gbs-icon">Up</div>
                 <input type="file" class="gbs-backup-input" accept=".cfg"/>
                 <div gbs-progress gbs-progress-restore>Restore</div>
               </button>
             </div>
-            <p class="gbs-hint">Backup includes the profiles. Restore writes them back and restarts. Startup loads the last profile.</p>
+            <p class="gbs-hint">Backup includes profiles. Restore writes them back and restarts.</p>
           </fieldset>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend">
-              <div class="gbs-icon">WiFi</div>
               <div>Wi-Fi</div>
             </legend>
-            <p class="gbs-hint">Access point gbscontrol has no Wi-Fi password. Open http://192.168.4.1 yourself. The phone sign-in sheet is not this page.</p>
-            <p class="gbs-hint">The page password is qqqqqqqq. Any username is fine. Station joins a home network and the board restarts. Then open http://gbscontrol.local. The address can change after a restart.</p>
+            <p class="gbs-hint">On gbscontrol, open http://192.168.4.1. Page password qqqqqqqq, any username. After Station joins, open http://gbscontrol.local.</p>
 
             <div class="gbs-flex gbs-margin__bottom--16">
               <button class="gbs-button gbs-button__control" gbs-wifi-ap>
-                <div class="gbs-icon">Pin</div>
                 <div>Access Point</div>
               </button>
               <button class="gbs-button gbs-button__control" gbs-wifi-station>
-                <div class="gbs-icon">RF</div>
                 <div gbs-wifi-station-ssid>Station</div>
               </button>
             </div>
             <fieldset class="gbs-fieldset" gbs-wifi-list hidden>
               <legend class="gbs-fieldset__legend">
-                <div class="gbs-icon">LAN</div>
                 <div>Select SSID</div>
               </legend>
               <table class="gbs-wifi__list"></table>
             </fieldset>
             <fieldset class="gbs-fieldset gsb-wifi__connect" hidden>
-              <legend class="gbs-fieldset__legend">
-                <div class="gbs-icon">Join</div>
-                <div>Connect to SSID</div>
-              </legend>
               <div class="gbs-flex">
                 <input
                   class="gbs-button gbs-wifi__input"
@@ -2256,7 +2225,6 @@ section[name="alert"] {
                   gbs-wifi-connect-button
                   class="gbs-button gbs-button__control gbs-button__secondary"
                 >
-                  <div class="gbs-icon">Net</div>
                   <div>Connect</div>
                 </button>
               </div>
@@ -2266,8 +2234,7 @@ section[name="alert"] {
         <section name="prompt" hidden>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend">
-              <div class="gbs-icon">Keys</div>
-              <div gbs-prompt-content>Prompt</div>
+              <div gbs-prompt-content>Profile name</div>
             </legend>
             <div class="gbs-flex gbs-margin__bottom--16">
               <input
@@ -2279,14 +2246,12 @@ section[name="alert"] {
             </div>
             <div class="gbs-flex">
               <button gbs-prompt-cancel class="gbs-button gbs-button__control">
-                <div class="gbs-icon">X</div>
-                <div>CANCEL</div>
+                <div>Cancel</div>
               </button>
               <button
                 gbs-prompt-ok
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
-                <div class="gbs-icon">OK</div>
                 <div>OK</div>
               </button>
             </div>
@@ -2308,7 +2273,6 @@ section[name="alert"] {
                 gbs-alert-ok
                 class="gbs-button gbs-button__control gbs-button__secondary"
               >
-                <div class="gbs-icon">OK</div>
                 <div>OK</div>
               </button>
             </div>
@@ -2803,7 +2767,7 @@ const renderProfiles = () => {
     const selected = GBSControl.profile.selected || "A";
     list.innerHTML = profileChars().map((chr) => {
         const chosen = chr === selected ? " data-chosen" : "";
-        const meta = chr === startup ? "startup" : ("profile " + chr);
+        const meta = chr === startup ? "startup" : "";
         return `<button type="button" class="gbs-button gbs-button__slot" gbs-role="slot" gbs-element-ref="slot-${chr}" gbs-profile="${chr}" gbs-name="${profileEscape(profileLabel(chr))}" gbs-meta="${meta}"${chosen}></button>`;
     }).join("");
     list.querySelectorAll("[gbs-profile]").forEach((btn) => {
@@ -2832,7 +2796,7 @@ const noteStartupSlot = (chr) => {
     }
     document.querySelectorAll("[gbs-profile]").forEach((btn) => {
         const id = btn.getAttribute("gbs-profile");
-        btn.setAttribute("gbs-meta", id === chr ? "startup" : ("profile " + id));
+        btn.setAttribute("gbs-meta", id === chr ? "startup" : "");
         if (id === GBSControl.profile.selected) {
             btn.setAttribute("data-chosen", "");
         }
