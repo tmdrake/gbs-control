@@ -67,7 +67,7 @@ The level is not written into the picture slot or `preferencesv2.txt`. Unpluggin
 
 The sample-clock PLL locks to the recovered horizontal sync and decides how many ADC clocks fit on a line.
 
-The output raster has its own clock. An Si5351 breakout drives TV5725 pin 40 and replaces the chip’s PLL648. Frame Lock measures the game frame and trims that Si5351 frequency until the output frame is the same length, so a tear line does not crawl.
+The output raster has its own clock. An Si5351 breakout drives TV5725 pin 40 and replaces the chip’s PLL648. With Frame Lock off, that clock stays on the 1280×960 timing, about 60 Hz. Frame Lock measures the game frame and trims the Si5351 until the output frame is the same length, so a tear line does not crawl. A 243-line source is not 60 Hz. Matching it moves the horizontal rate the display has to lock. Leave Frame Lock off when that horizontal sync wanders. Turn it on only when a slow tear is the problem you want to remove.
 
 ## Pandora Box DX
 
@@ -106,6 +106,20 @@ The scanline switch is one saved preference. A picture slot can store its own co
 The on-screen display is a factory icon on the video for a couple of seconds. It appears at lock, and again when gain, contrast, move, size, or scanlines is changed. It is not a constant overlay.
 
 The blue light on the ESP8266 is the lock LED. It is on while the scaler reports sync, and off when that sync is declared lost. A short reboot can leave it looking steady, because the picture chip keeps running and the LED comes back on as soon as lock returns.
+
+## Help
+
+The page says locked when the detected mode is set and horizontal sync is present. Mode `HSync RGBS/RGBHV` with about 243 to 262 lines is the 15 kHz picture from a Pandora Box DX on 384×224. About 744 lines is 1280×720. A line count that jumps, with horizontal sync off, is the scaler hunting. Reset the GBS after changing the DX resolution. The lock often appears only after that reset.
+
+Scanlines need that 15 kHz lock. They are drawn through the line doubler. A 720p or 640×480 source bypasses the doubler, so the saved scanline switch can stay on and the lines still do not show. The Pandora menu item Scanning Line is a different effect. Leave it off so the two do not stack.
+
+The on-screen display is not a menu that stays up. It is a short icon on the video when brightness, contrast, move, size, or scanlines changes. It needs the same locked picture.
+
+Output horizontal sync is the GBS raster, not the game’s sync. With Frame Lock off, it stays on the 1280×960 clock. With Frame Lock on, the Si5351 is trimmed to this frame, about 64 Hz for 243 lines instead of 60 Hz, and some displays lose horizontal lock. If the width or the horizontal lock looks wrong, turn Frame Lock off first. Position and width are the Picture arrows after that.
+
+The picture controls use arrow marks. Picture and System are the only names on those menu buttons.
+
+To read a fault after the fact, connect USB at 115200 and send `H`. The log is also in `/faults.txt` on the chip. A boot line is the reset reason. `scan skipped` means scanlines were saved and the line doubler was bypassed.
 
 ## Picture
 
