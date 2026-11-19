@@ -75,11 +75,16 @@ A Pandora Box DX on the JAMMA edge can send three pictures. The manual lists 128
 
 Hold the cabinet Service button, turn the cabinet on, and release Service after about 2 seconds. Each power-on steps one resolution: 640×480, then 384×224. The button on the DX board itself does the same job. The Scanning Line item in the DX menu is the Pandora’s own effect. Leave it off when the GBS is drawing scanlines.
 
-A locked 15 kHz picture is about 262 lines, mode 14, with horizontal sync present. About 744 lines is the 720p raster, not a locked game. The coast does not apply there. It only holds while horizontal sync is present and the line count stays about 250 to 280, or 300 to 330 for PAL.
+The page names a locked RGB picture `HSync RGBS/RGBHV`. The line count under that name is what picks the input path:
 
-With the DX still on 720p, the page reports no lock. The line count wanders, through the 400s and well above 1000, and horizontal sync stays off. Scanlines are not drawn, because the line doubler is bypassed. The on-screen icons need that same locked picture.
+- Under 280 lines is 15 kHz, NTSC-like. Pandora 384×224 landed here, around 243 lines. The line doubler stays in the path, and GBS scanlines can draw.
+- From 280 through 379 lines is still 15 kHz, PAL-like. The doubler stays in.
+- From 380 through 535 lines is 31 kHz. Pandora 640×480 is this case. A standard 640×480 frame is 525 lines. The picture can lock and still scale to 1280×960. The line doubler is bypassed, so GBS scanlines do not draw.
+- Above 535 lines, scaling turns off. Pandora 1280×720 sits around 744 lines. The count often wanders, horizontal sync stays off, and the page says no lock.
 
-Set the DX to 384×224. The page should then say locked, with the line count near 262. Scanlines turn on from the GBS page. The icons show when brightness, contrast, position, or size changes.
+Ignore VSync holds the slicer while horizontal sync is present and the line count stays about 250 to 280, or 300 to 330 for PAL. A 525-line frame is outside that hold. A 744-line frame is outside it too.
+
+Set the DX to 384×224, then reset the GBS. The page should say locked, with the line count under 280. Scanlines turn on from the GBS page. The icons show when brightness, contrast, position, or size changes. On 640×480 those icons can still show after lock. The icons and the scanline mix are separate.
 
 ## Open the page
 
@@ -101,9 +106,21 @@ Plug in USB, open the serial port at 115200, and send the letter `H`. The chip p
 
 ## Scanlines and the on-screen display
 
-The scanline switch is one saved preference. A picture slot can store its own copy, and that copy is applied when the slot is loaded. Connecting a source does not reload the slot. A timing preset is saved with scanlines turned off on purpose, then the effect is put back only while the line doubler is in the path. A tall source, such as one reporting about 744 lines, bypasses the line doubler, so the saved switch can stay on and the lines are not drawn.
+Scanlines are mixed in the TV5725 line doubler, while the picture is still 15 kHz. The doubler stores each incoming line. The deinterlacer mixer then darkens every other stored line. The saved strength is that mix (`MADPT_Y_MI_OFFSET`). The firmware calls `enableScanlines()` only while the doubler is in the path (`IF_LD_RAM_BYPS` is 0). The dark lines are scaled up with the rest of the picture. They are not drawn on the 1280×960 output grid.
 
-The on-screen display is a factory icon on the video for a couple of seconds. It appears at lock, and again when gain, contrast, move, size, or scanlines is changed. It is not a constant overlay.
+A normal output preset, such as 1280×960, chooses that path from the locked line count. Under 380 lines keeps the doubler. From 380 through 535 lines loads the 31 kHz path and bypasses the doubler. That is Pandora 640×480. Above 535 lines leaves scaling entirely. That is Pandora 1280×720.
+
+The Scanlines switch is one saved preference. It can stay on while 640×480 is showing. The lines still do not appear. Strength only writes the mixer after the overlay is already on, so Intensity on this mode stores a new number and draws nothing. The first time a wanted overlay finds the doubler bypassed, `/faults.txt` records `scan skipped` and that line count. One line per boot. A later change to 384×224 in the same boot does not add a second line. A boot that starts on 384×224 has no skip line.
+
+The page also allows scanlines for 480i with Bob. That is an interlaced field on the 15 kHz path, with the line count stepping between the odd and even values around 525, and the deinterlacer set to Bob. Motion-adaptive deinterlace uses the same mixer, so it turns the overlay off. Pandora 640×480 is progressive 31 kHz. It does not enter the Bob path.
+
+A saved custom preset skips the line-count choice. The doubler bit is then whatever that register file contains. A file saved from 384×224 keeps the doubler enabled, so the overlay can try to run on 640×480. A file saved from 640×480 or 720p keeps the doubler bypassed, so 384×224 draws no GBS scanlines until a 15 kHz preset is loaded again. Saving a preset turns the overlay off inside the file on purpose. The global switch is applied again later, and only when the doubler is in the path.
+
+A picture slot can store its own scanline copy. That copy is applied when the slot is loaded. Connecting the DX, or stepping its resolution, does not load a slot. Reset the GBS after a DX resolution change so the line count is read again.
+
+Pandora’s Scanning Line menu draws its own lines into the raster before the GBS. On 384×224 leave it off, so it does not sit under the GBS overlay. On 640×480 the GBS overlay has no doubler to draw with. The DX menu is the effect that still can. Those lines are scaled with the picture, so they come out soft.
+
+The on-screen display is a factory icon on the video for a couple of seconds. It appears at lock, and again when gain, contrast, move, size, or scanlines is changed. It is not a constant overlay. Lock is enough for an icon. Lock is not enough for scanlines.
 
 The blue light on the ESP8266 is the lock LED. It is on while the scaler reports sync, and off when that sync is declared lost. A short reboot can leave it looking steady, because the picture chip keeps running and the LED comes back on as soon as lock returns.
 
@@ -111,7 +128,7 @@ The blue light on the ESP8266 is the lock LED. It is on while the scaler reports
 
 The page says locked when the detected mode is set and horizontal sync is present. Mode `HSync RGBS/RGBHV` with about 243 to 262 lines is the 15 kHz picture from a Pandora Box DX on 384×224. About 744 lines is 1280×720. A line count that jumps, with horizontal sync off, is the scaler hunting. Reset the GBS after changing the DX resolution. The lock often appears only after that reset.
 
-Scanlines need that 15 kHz lock. They are drawn through the line doubler. A 720p or 640×480 source bypasses the doubler, so the saved scanline switch can stay on and the lines still do not show. The Pandora menu item Scanning Line is a different effect. Leave it off so the two do not stack.
+Scanlines need the 15 kHz lock, under 380 lines, so the line doubler is in the path. Pandora 640×480 locks nearer 525 lines. The doubler stays bypassed, the saved switch can stay on, and the lines do not show. The full path and the gotchas are under Scanlines and the on-screen display. The Pandora menu item Scanning Line is a different effect. Leave it off on 384×224 so the two do not stack. On 640×480 it is the effect the DX can still draw, and the scaler will soften it.
 
 The on-screen display is not a menu that stays up. It is a short icon on the video when brightness, contrast, move, size, or scanlines changes. It needs the same locked picture.
 
@@ -129,7 +146,7 @@ To read a fault after the fact, connect USB at 115200 and send `H`. The log is a
 - **Contrast −** and **contrast +** stretch black to white on the scaled picture (`VDS_Y_GAIN`, step of 8).
 - **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
-- **Scanlines** turns the line overlay on or off. The choice is saved. A source that bypasses the line doubler does not draw them. See Scanlines and the on-screen display.
+- **Scanlines** turns the line overlay on or off. The choice is saved. It draws on a 15 kHz source, under 380 lines. Pandora 640×480 is about 525 lines, the doubler is bypassed, and the lines do not draw. See Scanlines and the on-screen display.
 - **Ignore VSync** is the CSYNC coast described under Sync slicer. XOR composite sync has no long vertical pulse, and the pulse width glitches while the frame is still drawing. With this on, that glitch does not move the slicer. Turn it off for a source with separate H and V.
 - **Save picture** stores the size, position, and contrast in one slot. That slot loads again at startup.
 
