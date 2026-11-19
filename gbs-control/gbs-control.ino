@@ -1370,7 +1370,9 @@ void optimizeSogLevel()
         rto->thisSourceMaxLevelSOG = rto->currentLevelSOG = 13;
         return;
     }
-    if (rto->videoStandardInput == 15 || GBS::SP_SOG_MODE::read() != 1 || rto->syncTypeCsync == false) {
+    // Separate H and V does not use the slicer. C-sync still does, including
+    // after a pass that parked the chip in the RGBHV preset.
+    if (GBS::SP_SOG_MODE::read() != 1 || rto->syncTypeCsync == false) {
         rto->thisSourceMaxLevelSOG = rto->currentLevelSOG = 13;
         return;
     }
@@ -1497,12 +1499,13 @@ uint8_t detectAndSwitchToActiveInput()
                     delay(1);
                 }
 
-                // Saved option. Some boards XOR H and V onto the CSync pin, so the
-                // horizontal pulses flip during vertical blank and there is no
-                // long vertical pulse. Accept HSync alone instead of waiting.
-                if (uopt->coastThroughMissingVSync && !vsyncActive && GBS::STATUS_SYNC_PROC_HSACT::read()) {
-                    SerialM.println(F("VSync ignored (HSync only)"));
-                    vsyncActive = 1;
+                // JAMMA puts composite sync on one pin. There is no separate
+                // vertical wire. A missing long pulse is still that one sync.
+                // Stay on the C-sync search so the slicer can walk. Ignore
+                // VSync off keeps the separate H and V test below.
+                if (uopt->coastThroughMissingVSync) {
+                    SerialM.println(F("CSync only"));
+                    vsyncActive = 0;
                 }
 
                 // if VSync is active, it's RGBHV or RGBHV with CSync on HS pin

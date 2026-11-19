@@ -53,6 +53,8 @@ Without **Ignore VSync**, seventeen of those flags inside a 3 second window lowe
 
 **Ignore VSync** is on by default, and it is the coast for this case. While horizontal sync is present and the line count is still about 250 to 280, or 300 to 330 for PAL, a bad sample does not lower the slicer and does not reset mode detect. The level detection found is the level that stays. A real disconnect is different: horizontal sync is gone, or the line count leaves that range. Then the old reset path runs, and the next source is searched from level 13 again.
 
+JAMMA puts that composite sync on one pin. With **Ignore VSync** on, detection stays on that pin and walks the slicer. It does not switch over to separate horizontal and vertical just because the long vertical pulse is missing. Turn **Ignore VSync** off for a source that really has separate H and V.
+
 ### Sync slicer voltage
 
 ![Sync slicer voltage](images/slicer-voltage.svg)
@@ -147,7 +149,7 @@ To read a fault after the fact, connect USB at 115200 and send `H`. The log is a
 - **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
 - **Scanlines** turns the line overlay on or off. The choice is saved. It draws on a 15 kHz source, under 380 lines. Pandora 640×480 is about 525 lines, the doubler is bypassed, and the lines do not draw. When the locked picture is 380 lines or more, and it is not NTSC or PAL, the **Scanlines** button is disabled and a note under it shows the line count. Pandora 720p is about 744 lines, so the note says 720p. See Scanlines and the on-screen display.
-- **Ignore VSync** is the CSYNC coast described under Sync slicer. XOR composite sync has no long vertical pulse, and the pulse width glitches while the frame is still drawing. With this on, that glitch does not move the slicer. Turn it off for a source with separate H and V.
+- **Ignore VSync** is the CSYNC coast described under Sync slicer. JAMMA has that one sync pin. With this on, detection stays on composite sync and the slicer can walk. Turn it off for a source with separate H and V.
 - **Profile** stores the current picture under a name. Six profiles are listed, A through F. **Save** writes the chosen one and makes it the startup profile. **Recall** loads it now. **Rename** changes the name and leaves the saved picture in place. Startup loads that same profile again. An older save that used another slot still appears in the list.
 
 The TV5725 factory OSD icons appear on the video for a couple of seconds at lock, and again when you tap gain, contrast, move, size, or scanlines. Those icons are hardwired in the chip. Custom text or a custom logo cannot be uploaded.
