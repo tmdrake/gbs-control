@@ -1370,9 +1370,9 @@ void optimizeSogLevel()
         rto->thisSourceMaxLevelSOG = rto->currentLevelSOG = 13;
         return;
     }
-    // Separate H and V does not use the slicer. C-sync still does, including
-    // after a pass that parked the chip in the RGBHV preset.
-    if (GBS::SP_SOG_MODE::read() != 1 || rto->syncTypeCsync == false) {
+    // Mode 15 is the locked RGBHV preset. Restarting the slicer there
+    // drops a JAMMA frame that already has horizontal sync.
+    if (rto->videoStandardInput == 15 || GBS::SP_SOG_MODE::read() != 1 || rto->syncTypeCsync == false) {
         rto->thisSourceMaxLevelSOG = rto->currentLevelSOG = 13;
         return;
     }
@@ -1499,13 +1499,12 @@ uint8_t detectAndSwitchToActiveInput()
                     delay(1);
                 }
 
-                // JAMMA puts composite sync on one pin. There is no separate
-                // vertical wire. A missing long pulse is still that one sync.
-                // Stay on the C-sync search so the slicer can walk. Ignore
-                // VSync off keeps the separate H and V test below.
-                if (uopt->coastThroughMissingVSync) {
-                    SerialM.println(F("CSync only"));
-                    vsyncActive = 0;
+                // JAMMA composite sync has no long vertical pulse. Accept the
+                // horizontal sync that is already present. Forcing a new
+                // slicer search here drops the lock.
+                if (uopt->coastThroughMissingVSync && !vsyncActive && GBS::STATUS_SYNC_PROC_HSACT::read()) {
+                    SerialM.println(F("VSync ignored (HSync only)"));
+                    vsyncActive = 1;
                 }
 
                 // if VSync is active, it's RGBHV or RGBHV with CSync on HS pin
@@ -5890,11 +5889,12 @@ void fastSogAdjust()
     }
 }
 
-// NTSC 15 kHz is about 262 lines, PAL about 312. A few lines of jitter
-// still means the game is drawing, even when the sync pulse width glitches.
+// One hold for every JAMMA frame. A TV that crops the border can move the
+// count between the old NTSC and PAL windows. 284 is in that gap. Above
+// 400 lines is the Pandora's other picture, and the slicer may move.
 static bool compositeFrameStillPresent(uint16_t lines)
 {
-    return (lines >= 250 && lines <= 280) || (lines >= 300 && lines <= 330);
+    return lines >= 200 && lines < 400;
 }
 
 void runSyncWatcher()
@@ -6569,7 +6569,7 @@ void runSyncWatcher()
                     Serial.println(sourceRate);
 
                     // todo: this hack is hard to understand when looking at applypreset and mode is suddenly 1,2 or 3
-                    if (uopt->presetPreference == 2) {
+                    if (uopt->presetPreference == 2 && sourceLines < 400) {
                         // custom preset defined, try to load (set mode = 14 here early)
                         rto->videoStandardInput = 14;
                     } else {
