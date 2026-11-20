@@ -2858,6 +2858,12 @@ const profileSave = () => {
         setProfileStatus("Could not save this profile.");
         return;
     }
+    const lineEl = document.getElementById("signal-lines");
+    const lines = lineEl ? Number(lineEl.textContent) : 0;
+    if (lines >= 400) {
+        setProfileStatus("Over 400 lines. The JAMMA profile was not changed.");
+        return;
+    }
     setProfileStatus("Saving " + name + "…");
     fetch(`/slot/set?slot=${encodeURIComponent(chr)}&${Date.now()}`)
         .then(profileReadOk)

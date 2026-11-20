@@ -4276,10 +4276,16 @@ void applyPresets(uint8_t result)
         }
 #if defined(ESP8266)
         else if (uopt->presetPreference == OutputCustomized) {
-            const uint8_t *preset = loadPresetFromSPIFFS(result);
-            writeProgramArrayNew(preset, false);
-            if (applySavedBypassPreset()) {
-                return;
+            // About 500 lines. Do not load a saved 480p file over the stock scale.
+            if (result == 3) {
+                SerialM.println(F("500-line source, stock 1280x960"));
+                writeProgramArrayNew(ntsc_240p, false);
+            } else {
+                const uint8_t *preset = loadPresetFromSPIFFS(result);
+                writeProgramArrayNew(preset, false);
+                if (applySavedBypassPreset()) {
+                    return;
+                }
             }
         } else if (uopt->presetPreference == 4) {
             if (uopt->matchPresetSource && (result != 8) && (GBS::GBS_OPTION_SCALING_RGBHV::read() == 0)) {
@@ -4311,10 +4317,15 @@ void applyPresets(uint8_t result)
         }
 #if defined(ESP8266)
         else if (uopt->presetPreference == OutputCustomized) {
-            const uint8_t *preset = loadPresetFromSPIFFS(result);
-            writeProgramArrayNew(preset, false);
-            if (applySavedBypassPreset()) {
-                return;
+            if (result == 4) {
+                SerialM.println(F("500-line source, stock preset"));
+                writeProgramArrayNew(pal_240p, false);
+            } else {
+                const uint8_t *preset = loadPresetFromSPIFFS(result);
+                writeProgramArrayNew(preset, false);
+                if (applySavedBypassPreset()) {
+                    return;
+                }
             }
         } else if (uopt->presetPreference == 4) {
             writeProgramArrayNew(pal_1280x1024, false);
@@ -9188,9 +9199,10 @@ void handleType2Command(char argument)
             saveUserPrefs();
         } break;
         case '4': // save custom preset
-            savePresetToSPIFFS();
-            uopt->presetPreference = OutputCustomized; // custom
-            saveUserPrefs();
+            if (savePresetToSPIFFS()) {
+                uopt->presetPreference = OutputCustomized; // custom
+                saveUserPrefs();
+            }
             break;
         case '5':
             //Frame Time Lock toggle
@@ -10742,7 +10754,7 @@ const uint8_t *loadPresetFromSPIFFS(byte forVideoMode)
     return preset;
 }
 
-void savePresetToSPIFFS()
+bool savePresetToSPIFFS()
 {
     uint8_t readout = 0;
     File f;
@@ -10761,11 +10773,18 @@ void savePresetToSPIFFS()
     } else {
         // file not found, we don't know where to save this preset
         SerialM.println(F("please select a preset slot first!"));
-        return;
+        return false;
     }
 
     SerialM.print(F("saving to preset slot "));
     SerialM.println(String((char)slot));
+
+    // The running mode is put back to 14 after a scale, so a 500-line
+    // picture would overwrite the under-400 JAMMA file. Keep that file.
+    if (rto->videoStandardInput == 14 && GBS::STATUS_SYNC_PROC_VTOTAL::read() >= 400) {
+        SerialM.println(F("skip save, keep under-400 profile"));
+        return false;
+    }
 
     if (rto->videoStandardInput == 1) {
         f = SPIFFS.open("/preset_ntsc." + String((char)slot), "w");
@@ -10789,6 +10808,7 @@ void savePresetToSPIFFS()
 
     if (!f) {
         SerialM.println(F("open save file failed!"));
+        return false;
     } else {
         SerialM.println(F("open save file ok"));
 
@@ -10857,6 +10877,7 @@ void savePresetToSPIFFS()
         SerialM.println(f.name());
         f.close();
     }
+    return true;
 }
 
 void saveUserPrefs()
