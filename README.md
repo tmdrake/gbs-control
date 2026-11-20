@@ -53,7 +53,7 @@ Without **Ignore VSync**, seventeen of those flags inside a 3 second window lowe
 
 **Ignore VSync** is on by default, and it is the coast for this case. While horizontal sync is present and the line count is from 200 up to 399, a bad sample does not lower the slicer and does not reset mode detect. That covers a border shift between the old NTSC and PAL windows, including a 284-line frame. The level detection found is the level that stays. A real disconnect is different: horizontal sync is gone, or the line count is 400 or more. Then the old reset path runs, and the next source is searched from level 13 again. A saved profile is not applied to a picture of 400 lines or more, so a 15 kHz register file cannot replace that sync path. A picture near 500 lines uses the stock 1280×960 preset. Saving it does not replace the under-400 profile.
 
-JAMMA puts that composite sync on one pin. With **Ignore VSync** on, detection stays on that pin and walks the slicer. It does not switch over to separate horizontal and vertical just because the long vertical pulse is missing. Turn **Ignore VSync** off for a source that really has separate H and V.
+JAMMA puts that composite sync on one pin. **Ignore VSync** on accepts that pin when the separate vertical input stays quiet. Turn it off only for a source that really has separate H and V. The two modes are compared under Troubleshooting.
 
 ### Sync slicer voltage
 
@@ -82,9 +82,9 @@ The page names a locked RGB picture `HSync RGBS/RGBHV`. The line count under tha
 - Under 280 lines is 15 kHz, NTSC-like. Pandora 384×224 landed here, around 243 lines. The line doubler stays in the path, and GBS scanlines can draw.
 - From 280 through 379 lines is still 15 kHz, PAL-like. The doubler stays in.
 - From 380 through 535 lines is 31 kHz. Pandora 640×480 is this case. A standard 640×480 frame is 525 lines. The picture can lock and still scale to 1280×960. The line doubler is bypassed, so GBS scanlines do not draw.
-- Above 535 lines, scaling turns off. Pandora 1280×720 sits around 744 lines. The count often wanders, horizontal sync stays off, and the page says no lock.
+- Above 535 lines, scaling turns off. Pandora 1280×720 sits around 744 lines. The count often wanders and the page says no lock. If it does lock, the chip is in RGBHV bypass: the output sync follows the Pandora, and Move, Size, Crop, and Contrast are grey.
 
-Ignore VSync holds the slicer while horizontal sync is present and the line count stays about 250 to 280, or 300 to 330 for PAL. A 525-line frame is outside that hold. A 744-line frame is outside it too.
+Ignore VSync holds the slicer while horizontal sync is present and the line count stays from 200 through 399. A 525-line frame is outside that hold. A 744-line frame is outside it too.
 
 Set the DX to 384×224, then reset the GBS. The page should say locked, with the line count under 280. Scanlines turn on from the GBS page. The icons show when brightness, contrast, position, or size changes. On 640×480 those icons can still show after lock. The icons and the scanline mix are separate.
 
@@ -126,7 +126,57 @@ The on-screen display is a factory icon on the video for a couple of seconds. It
 
 The blue light on the ESP8266 is the lock LED. It is on while the scaler reports sync, and off when that sync is declared lost. A short reboot can leave it looking steady, because the picture chip keeps running and the LED comes back on as soon as lock returns.
 
+## Troubleshooting
+
+Use this when a picture will not lock, the output label flips, or a control does nothing. The System page is the first reading: lock, mode, line count, and whether sync is H only or H and V.
+
+### Ignore VSync
+
+Leave **Ignore VSync** on for JAMMA. JAMMA C-sync is horizontal and vertical combined on one pin, so the chip’s separate vertical input stays quiet. The control tells the scaler to accept that one wire. The page then shows **H only**. The vertical timing is still inside the C-sync pulse.
+
+| | **Ignore VSync on** | **Ignore VSync off** |
+|---|---|---|
+| What the chip expects | One C-sync pin. A quiet vertical pin is accepted. | Separate horizontal and vertical wires. A quiet vertical pin means vertical sync is missing. |
+| Finding the picture | Horizontal sync is enough. The log prints `VSync ignored (HSync only)` and the slicer stays at the level it found, usually 13. | The search keeps waiting for a vertical pulse and walks the slicer. A JAMMA board often never locks, or locks and then drops. |
+| While a 15 kHz game is running | A short bad pulse does not move the slicer and does not blank the picture, while horizontal sync is present and the line count stays from 200 through 399. That includes a frame around 284 lines. | Seventeen bad pulses in about 3 seconds lower the slicer one step. XOR sync glitches often enough that the picture drops after 30 to 60 seconds. Two hundred bad samples in a row also blank it. |
+| When to use it | JAMMA, and any board that puts C-sync on one pin. This is the default. | A source that really has separate H and V. |
+
+A real disconnect still resets with the control on. Horizontal sync gone, or the line count at 400 or more, starts the search again from level 13. Pandora 720p is outside that hold, so the control does not freeze a 744-line picture. It only keeps the next JAMMA search on the C-sync pin.
+
+The choice is one saved switch for the whole board. A profile does not store it. Factory reset turns it back on. A saved file with it off was enough, together with a custom profile, to stop a known-good JAMMA board from clamping sync.
+
+### Modes
+
+The page names a locked RGB picture `HSync RGBS/RGBHV`. The line count picks the path.
+
+| Lines | Source | What the scaler does |
+|---|---|---|
+| Under 280 | 15 kHz, NTSC-like. Pandora 384×224 is about 243. A JAMMA game is often about 262, and a tall frame can read about 284. | Scales to 1280×960. The line doubler stays in, so scanlines can draw. |
+| 280 through 379 | 15 kHz, PAL-like. | Same scaled path. The doubler stays in. |
+| 380 through 535 | 31 kHz. Pandora 640×480 is about 525. | Scales to the stock 1280×960 preset. A saved 480p or 576p file is not loaded. The doubler is bypassed, so scanlines do not draw. |
+| Above 535 | Pandora 1280×720 is about 744. | Scaling turns off. RGBHV bypass passes the Pandora sync through. Move, Size, Crop, and Contrast are grey. Darker, Brighter, and Auto Gain still change the input gain. |
+
+Reset the GBS after a Pandora resolution change. The lock often appears only after that reset. For a steady 1280×960 output, use 384×224. Use 640×480 when that scaled picture is the one you want. 720p is the bypass path, and the VGA-to-HDMI adapter then reports the Pandora’s own timing.
+
+### Custom settings
+
+Six profiles, A through F. **Save** writes the name, the register file, and makes that row the startup profile. **Recall** loads it now. **Rename** changes only the name.
+
+A profile stores position, size, crop, gain, contrast, scanlines and strength, line filter, step response, peaking, and the full register file, including the sync clamp. **Frame Lock** and **Ignore VSync** are global. Save and Recall leave them as they are.
+
+Startup loads the last saved or recalled row when the line count is under 400. At 400 lines or more that file is not applied, so a 15 kHz register file cannot replace the sync path of a 500-line or 720p picture. Saving on a picture of 400 lines or more does not replace the under-400 profile. The page says so.
+
+**Reset Defaults** reloads the stock options and restarts. Output returns to 1280×960, Frame Lock off, scanlines off, and Ignore VSync on. It does not erase profiles, saved pictures, or Wi-Fi. If a custom profile was what broke the clamp, reset the defaults and leave Ignore VSync on before saving that profile again.
+
+### Hardware
+
+JAMMA video arrives as analog RGB plus one C-sync pin. Red, green, and blue each pass through a series resistor, from about 5 V on the arcade board to about 1 V at the scaler. CSYNC may have the same kind of resistor, and it is terminated with about 100 ohm to ground on the scaler side of that wire. A smaller sync tip is why detection sometimes has to step the slicer down from level 13. The level it finds is not saved. The next source starts at 13 again.
+
+The output is analog RGB with separate H and V, normally 1280×960 at 60 Hz. The Si5351 drives TV5725 pin 40 and stays on that clock while Frame Lock is off. Frame Lock trims the clock to the game frame, and a VGA-to-HDMI adapter can then relabel 1280×960 as 1280×720. Leave Frame Lock off when the output label flips or the display loses horizontal lock. HDMI and DDC stay in the adapter. The scaler does not speak to the TV.
+
 ## Help
+
+Mode, profile, and hardware checks for a lost lock are under Troubleshooting.
 
 The page says locked when the detected mode is set and horizontal sync is present. Mode `HSync RGBS/RGBHV` with about 243 to 262 lines is the 15 kHz picture from a Pandora Box DX on 384×224. About 744 lines is 1280×720. A line count that jumps, with horizontal sync off, is the scaler hunting. Reset the GBS after changing the DX resolution. The lock often appears only after that reset.
 
@@ -149,7 +199,7 @@ To read a fault after the fact, connect USB at 115200 and send `H`. The log is a
 - **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge. In bypass, Pandora 720p, those three and **Contrast** are grey. Darker, brighter, and Auto Gain stay on.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
 - **Scanlines** turns the line overlay on or off. The choice is saved. It draws on a 15 kHz source, under 380 lines. Pandora 640×480 is about 525 lines, the doubler is bypassed, and the lines do not draw. When the locked picture is 380 lines or more, and it is not NTSC or PAL, the **Scanlines** button is disabled and a note under it shows the line count. Pandora 720p is about 744 lines, so the note says 720p. See Scanlines and the on-screen display.
-- **Ignore VSync** is the CSYNC coast described under Sync slicer. JAMMA has that one sync pin. With this on, detection stays on composite sync and the slicer can walk. Turn it off for a source with separate H and V.
+- **Ignore VSync** stays on for JAMMA. The signal is C-sync on one pin, so the page shows H only. Off is for a source with separate H and V. The two modes are compared under Troubleshooting.
 - **Profile** stores the current picture under a name. Six profiles are listed, A through F. **Save** writes the chosen one and makes it the startup profile. **Recall** loads it now. **Rename** changes the name and leaves the saved picture in place. Startup loads that same profile again. An older save that used another slot still appears in the list.
 
 The TV5725 factory OSD icons appear on the video for a couple of seconds at lock, and again when you tap gain, contrast, move, size, or scanlines. Those icons are hardwired in the chip. Custom text or a custom logo cannot be uploaded.
