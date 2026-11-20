@@ -32,7 +32,7 @@ Red, green, and blue enter the triple ADC at about 1 V. On a 15 kHz source the s
 
 A 240p game is already one progressive field, so the deinterlacer stays off. A 480i field turns on motion-adaptive deinterlace.
 
-The scaler then builds its own raster. On this board that raster is 1280×960 at 60 Hz, with peaking, scanlines, and contrast (`VDS_Y_GAIN`) applied on the way out. The video DAC turns it back into analog red, green, and blue, plus separate horizontal and vertical sync. A VGA-to-HDMI converter after the GBS makes the HDMI picture. Display Data Channel stays between that converter and the TV.
+The scaler then builds its own raster. On this board that raster is 1280×960 at 60 Hz, with peaking, scanlines, and contrast (`VDS_Y_GAIN`) applied on the way out. The video DAC turns it back into analog red, green, and blue, plus separate horizontal and vertical sync. A VGA-to-HDMI converter after the GBS makes the HDMI picture. Display Data Channel stays between that converter and the TV. The scaler never reads the TV, so it does not learn whether the set is 720, 1080, or a VGA monitor that can show 1280×960.
 
 ### Sync slicer
 
@@ -172,7 +172,7 @@ Startup loads the last saved or recalled row when the line count is under 400. A
 
 JAMMA video arrives as analog RGB plus one C-sync pin. Red, green, and blue each pass through a series resistor, from about 5 V on the arcade board to about 1 V at the scaler. CSYNC may have the same kind of resistor, and it is terminated with about 100 ohm to ground on the scaler side of that wire. A smaller sync tip is why detection sometimes has to step the slicer down from level 13. The level it finds is not saved. The next source starts at 13 again.
 
-The output is analog RGB with separate H and V, normally 1280×960 at 60 Hz. The Si5351 drives TV5725 pin 40 and stays on that clock while Frame Lock is off. Frame Lock trims the clock to the game frame, and a VGA-to-HDMI adapter can then relabel 1280×960 as 1280×720. Leave Frame Lock off when the output label flips or the display loses horizontal lock. HDMI and DDC stay in the adapter. The scaler does not speak to the TV.
+The output is analog RGB with separate H and V. The saved preset picks the raster. Nothing in the firmware reads EDID or DDC, so plugging in a TV does not change it. 1280×960 at 60 Hz is the default and the odd VGA mode. 1280×720 and 1920×1080 are the presets a 720 or 1080 set can lock to. This TV reports 720 and 1080. A VGA monitor is what can use the 960 raster. The Si5351 drives TV5725 pin 40 and stays on the chosen clock while Frame Lock is off. Frame Lock trims that clock to the game frame, and a VGA-to-HDMI adapter can then relabel 1280×960 as 1280×720. Leave Frame Lock off when the output label flips or the display loses horizontal lock. HDMI and DDC stay in the adapter. The scaler does not speak to the TV.
 
 ## Help
 
