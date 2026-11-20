@@ -996,6 +996,7 @@ section[name="alert"] {
                 gbs-message="M"
                 gbs-message-type="user"
                 gbs-click="repeat"
+                data-scaler=""
                 class="gbs-button gbs-button__control"
               >
                 <div class="gbs-icon">-</div>
@@ -1005,6 +1006,7 @@ section[name="alert"] {
                 gbs-message="N"
                 gbs-message-type="user"
                 gbs-click="repeat"
+                data-scaler=""
                 class="gbs-button gbs-button__control"
               >
                 <div class="gbs-icon">+</div>
@@ -1020,18 +1022,21 @@ section[name="alert"] {
               <button
                 class="gbs-button gbs-button__control gbs-icon gbs-button__secondary"
                 gbs-control-key="left"
+                data-scaler=""
               >
                 ←
               </button>
               <button
                 class="gbs-button gbs-button__control gbs-icon gbs-button__secondary"
                 gbs-control-key="up"
+                data-scaler=""
               >
                 ↑
               </button>
               <button
                 class="gbs-button gbs-button__control gbs-icon gbs-button__secondary"
                 gbs-control-key="right"
+                data-scaler=""
               >
                 →
               </button>
@@ -1043,6 +1048,7 @@ section[name="alert"] {
               <button
                 class="gbs-button gbs-button__control gbs-icon gbs-button__secondary"
                 gbs-control-key="down"
+                data-scaler=""
               >
                 ↓
               </button>
@@ -1054,6 +1060,7 @@ section[name="alert"] {
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="move"
+                data-scaler=""
                 active
               >
                 <div>Move</div>
@@ -1061,17 +1068,20 @@ section[name="alert"] {
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="scale"
+                data-scaler=""
               >
                 <div>Size</div>
               </button>
               <button
                 class="gbs-button gbs-button__control"
                 gbs-control-target="borders"
+                data-scaler=""
               >
                 <div>Crop</div>
               </button>
             </div>
             <p class="gbs-hint" gbs-control-hint>Arrows shift the picture.</p>
+            <p class="gbs-hint gbs-hint--warn" id="bypass-note" hidden>Bypass. Move, size, crop, and contrast do not change this picture.</p>
           </fieldset>
           <fieldset class="gbs-fieldset gbs-controls__desktop">
             <legend class="gbs-fieldset__legend">
@@ -2720,12 +2730,35 @@ const updateSignal = () => {
         setSignalText("signal-ftl", ftl, data.frameLock && !data.frameLockReady);
         const scanlineNote = document.getElementById("scanline-note");
         const scanlineButton = document.getElementById("scanlines-button");
+        const bypass = !!data.bypass;
+        document.querySelectorAll("[data-scaler]").forEach((btn) => {
+            if (bypass) {
+                btn.setAttribute("disabled", "");
+            }
+            else {
+                btn.removeAttribute("disabled");
+            }
+        });
+        const bypassNote = document.getElementById("bypass-note");
+        if (bypassNote) {
+            if (bypass) {
+                bypassNote.removeAttribute("hidden");
+            }
+            else {
+                bypassNote.setAttribute("hidden", "");
+            }
+        }
         if (scanlineNote && scanlineButton) {
             const lines = Number(data.lines);
             const ntscOrPal = data.mode === "NTSC 240p/480i" || data.mode === "PAL 576i";
-            if (data.lock && lines >= 380 && !ntscOrPal) {
-                const kind = lines > 535 ? ", 720p" : "";
-                scanlineNote.textContent = lines + " lines" + kind + ". Scanlines cannot be drawn at 380 or more.";
+            if (bypass || (data.lock && lines >= 380 && !ntscOrPal)) {
+                if (data.lock && lines >= 380 && !ntscOrPal) {
+                    const kind = lines > 535 ? ", 720p" : "";
+                    scanlineNote.textContent = lines + " lines" + kind + ". Scanlines cannot be drawn at 380 or more.";
+                }
+                else {
+                    scanlineNote.textContent = "Scanlines cannot be drawn in bypass.";
+                }
                 scanlineNote.removeAttribute("hidden");
                 scanlineButton.setAttribute("disabled", "");
             }

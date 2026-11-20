@@ -146,7 +146,7 @@ To read a fault after the fact, connect USB at 115200 and send `H`. The log is a
 
 - **Darker** and **brighter** move the input gain by 8. **Auto Gain** chases white on its own and turns off when you set the gain by hand.
 - **Contrast −** and **contrast +** stretch black to white on the scaled picture (`VDS_Y_GAIN`, step of 8).
-- **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge.
+- **Move**, **Size**, and **Crop** shift the picture, change its width and height, or slide the outer edge. In bypass, Pandora 720p, those three and **Contrast** are grey. Darker, brighter, and Auto Gain stay on.
 - **Frame Lock** keeps the game frame and the output frame the same length so a tear line does not crawl. **VTotal + VSST** also shifts the vertical sync. **VTotal** only changes the frame length. If the screen goes blank or jumps, use the other one.
 - **Scanlines** turns the line overlay on or off. The choice is saved. It draws on a 15 kHz source, under 380 lines. Pandora 640×480 is about 525 lines, the doubler is bypassed, and the lines do not draw. When the locked picture is 380 lines or more, and it is not NTSC or PAL, the **Scanlines** button is disabled and a note under it shows the line count. Pandora 720p is about 744 lines, so the note says 720p. See Scanlines and the on-screen display.
 - **Ignore VSync** is the CSYNC coast described under Sync slicer. JAMMA has that one sync pin. With this on, detection stays on composite sync and the slicer can walk. Turn it off for a source with separate H and V.

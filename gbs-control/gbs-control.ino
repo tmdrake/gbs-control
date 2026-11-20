@@ -10568,16 +10568,17 @@ void startWebserver()
                 }
                 break;
         }
-        char buf[240];
+        char buf[256];
         snprintf(buf, sizeof(buf),
-                 "{\"lock\":%s,\"mode\":\"%s\",\"lines\":%u,\"hsync\":%s,\"vsync\":%s,\"frameLock\":%s,\"frameLockReady\":%s}",
+                 "{\"lock\":%s,\"mode\":\"%s\",\"lines\":%u,\"hsync\":%s,\"vsync\":%s,\"frameLock\":%s,\"frameLockReady\":%s,\"bypass\":%s}",
                  lock ? "true" : "false",
                  modeName,
                  (unsigned)lines,
                  hsync ? "true" : "false",
                  vsync ? "true" : "false",
                  uopt->enableFrameTimeLock ? "true" : "false",
-                 FrameSync::ready() ? "true" : "false");
+                 FrameSync::ready() ? "true" : "false",
+                 rto->videoStandardInput == 15 ? "true" : "false");
         request->send(200, "application/json", buf);
     });
 
